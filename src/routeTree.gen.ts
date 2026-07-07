@@ -9,9 +9,15 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as PlansRouteImport } from './routes/plans'
 import { Route as MoneyRouteImport } from './routes/money'
 import { Route as IndexRouteImport } from './routes/index'
 
+const PlansRoute = PlansRouteImport.update({
+  id: '/plans',
+  path: '/plans',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MoneyRoute = MoneyRouteImport.update({
   id: '/money',
   path: '/money',
@@ -26,31 +32,42 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/money': typeof MoneyRoute
+  '/plans': typeof PlansRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/money': typeof MoneyRoute
+  '/plans': typeof PlansRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/money': typeof MoneyRoute
+  '/plans': typeof PlansRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/money'
+  fullPaths: '/' | '/money' | '/plans'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/money'
-  id: '__root__' | '/' | '/money'
+  to: '/' | '/money' | '/plans'
+  id: '__root__' | '/' | '/money' | '/plans'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   MoneyRoute: typeof MoneyRoute
+  PlansRoute: typeof PlansRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/plans': {
+      id: '/plans'
+      path: '/plans'
+      fullPath: '/plans'
+      preLoaderRoute: typeof PlansRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/money': {
       id: '/money'
       path: '/money'
@@ -71,6 +88,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   MoneyRoute: MoneyRoute,
+  PlansRoute: PlansRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
