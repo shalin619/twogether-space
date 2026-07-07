@@ -18,8 +18,11 @@ const fabRoutes = new Set(["/", "/money", "/lists"]);
 
 export function AppShell({ children }: { children: ReactNode }) {
   const [quickOpen, setQuickOpen] = useState(false);
+  const [expenseOpen, setExpenseOpen] = useState(false);
   const location = useLocation();
   const showFab = fabRoutes.has(location.pathname);
+  const onMoney = location.pathname === "/money";
+
 
   return (
     <div className="min-h-[100dvh] w-full">
