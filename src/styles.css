@@ -151,6 +151,11 @@
   letter-spacing: -0.01em;
 }
 
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
+}
+
 @utility card-shadow {
   box-shadow: var(--shadow-card);
 }
