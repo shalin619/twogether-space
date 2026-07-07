@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as UsRouteImport } from './routes/us'
 import { Route as PlansRouteImport } from './routes/plans'
 import { Route as MoneyRouteImport } from './routes/money'
+import { Route as ListsRouteImport } from './routes/lists'
 import { Route as IndexRouteImport } from './routes/index'
 
 const UsRoute = UsRouteImport.update({
@@ -29,6 +30,11 @@ const MoneyRoute = MoneyRouteImport.update({
   path: '/money',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ListsRoute = ListsRouteImport.update({
+  id: '/lists',
+  path: '/lists',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -37,12 +43,14 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/lists': typeof ListsRoute
   '/money': typeof MoneyRoute
   '/plans': typeof PlansRoute
   '/us': typeof UsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/lists': typeof ListsRoute
   '/money': typeof MoneyRoute
   '/plans': typeof PlansRoute
   '/us': typeof UsRoute
@@ -50,20 +58,22 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/lists': typeof ListsRoute
   '/money': typeof MoneyRoute
   '/plans': typeof PlansRoute
   '/us': typeof UsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/money' | '/plans' | '/us'
+  fullPaths: '/' | '/lists' | '/money' | '/plans' | '/us'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/money' | '/plans' | '/us'
-  id: '__root__' | '/' | '/money' | '/plans' | '/us'
+  to: '/' | '/lists' | '/money' | '/plans' | '/us'
+  id: '__root__' | '/' | '/lists' | '/money' | '/plans' | '/us'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ListsRoute: typeof ListsRoute
   MoneyRoute: typeof MoneyRoute
   PlansRoute: typeof PlansRoute
   UsRoute: typeof UsRoute
@@ -92,6 +102,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MoneyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/lists': {
+      id: '/lists'
+      path: '/lists'
+      fullPath: '/lists'
+      preLoaderRoute: typeof ListsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -104,6 +121,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ListsRoute: ListsRoute,
   MoneyRoute: MoneyRoute,
   PlansRoute: PlansRoute,
   UsRoute: UsRoute,
