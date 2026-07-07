@@ -47,10 +47,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
           >
             <div className="pointer-events-auto">
-              <FAB onClick={() => setQuickOpen(true)}>
+              <FAB onClick={() => (onMoney ? setExpenseOpen(true) : setQuickOpen(true))}>
                 <Plus className="h-6 w-6" />
               </FAB>
             </div>
+
           </div>
         )}
 
