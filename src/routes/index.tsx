@@ -1,24 +1,38 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { AppHeader, Card } from "@/components/twogether/primitives";
+import { useCurrentUser } from "@/lib/currentUser";
 
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
 export const Route = createFileRoute("/")({
-  component: Index,
+  component: HomePlaceholder,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
-function Index() {
+function HomePlaceholder() {
+  const { currentUser, partner } = useCurrentUser();
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
+    <div>
+      <AppHeader
+        title={`Good morning, ${currentUser.name}`}
+        subtitle={`You & ${partner.name}`}
+        right={
+          <span
+            className="grid h-10 w-10 place-items-center rounded-full text-lg"
+            style={{ background: "var(--blush)" }}
+          >
+            {currentUser.avatarEmoji}
+          </span>
+        }
       />
+      <div className="px-4">
+        <Card>
+          <p className="font-display text-[18px] font-bold text-[color:var(--ink)]">
+            Home feed coming next
+          </p>
+          <p className="mt-1 text-[13.5px] text-[color:var(--ink-soft)]">
+            Section 1 is scaffolded: theme, shared components, bottom nav, FAB with quick-add,
+            mock data + service layer, and the dev A/M toggle (bottom-left).
+          </p>
+        </Card>
+      </div>
     </div>
   );
 }
