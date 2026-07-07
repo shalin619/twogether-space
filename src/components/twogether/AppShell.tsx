@@ -4,6 +4,7 @@ import { useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { FAB } from "./primitives";
 import { BottomSheet } from "./BottomSheet";
+import { AddExpenseSheet } from "./money/AddExpenseSheet";
 import { useCurrentUser } from "@/lib/currentUser";
 
 const tabs = [
