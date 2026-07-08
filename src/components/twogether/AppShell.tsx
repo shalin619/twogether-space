@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { Home, Coins, CalendarHeart, Users, ListChecks, Mic, X } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { FAB } from "./primitives";
 import { AddExpenseSheet } from "./money/AddExpenseSheet";
