@@ -100,7 +100,13 @@ function HomeFeed() {
       {/* ---- Header moment ---- */}
       <div className="px-4 pt-3">
         <div className="flex items-center justify-between">
-          <PairedAvatar a={currentUser.avatarEmoji} b={partner.avatarEmoji} size={44} />
+          <button
+            onClick={() => setSettingsOpen(true)}
+            className="rounded-full transition-transform active:scale-[0.96]"
+            aria-label="Settings"
+          >
+            <PairedAvatar a={currentUser.avatarEmoji} b={partner.avatarEmoji} size={44} />
+          </button>
           <button
             onClick={() => setBellOpen(true)}
             className="relative grid h-10 w-10 place-items-center rounded-full bg-[color:var(--surface)] card-shadow"
@@ -113,6 +119,7 @@ function HomeFeed() {
             />
           </button>
         </div>
+
         <h1 className="mt-5 font-display text-[28px] font-bold leading-[1.15] tracking-[-0.01em] text-[color:var(--ink)]">
           Good {greeting(now)}, {currentUser.name} <span className="text-[color:var(--gold)]">☀️</span>
         </h1>
