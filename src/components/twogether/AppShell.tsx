@@ -21,13 +21,31 @@ const fabRoutes = new Set(["/", "/money", "/lists"]);
 
 export function AppShell({ children }: { children: ReactNode }) {
   const [quickOpen, setQuickOpen] = useState(false);
+  const [voiceOpen, setVoiceOpen] = useState(false);
   const [expenseOpen, setExpenseOpen] = useState(false);
   const [spotlight, setSpotlight] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const showFab = fabRoutes.has(location.pathname);
-  const onMoney = location.pathname === "/money";
   const onWelcome = location.pathname.startsWith("/welcome");
+
+  // Long-press detection for the mic (tap = voice, hold = quick add)
+  const pressTimer = useRef<number | null>(null);
+  const longFired = useRef(false);
+  const startPress = () => {
+    longFired.current = false;
+    pressTimer.current = window.setTimeout(() => {
+      longFired.current = true;
+      setQuickOpen(true);
+      if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+        try { navigator.vibrate?.(12); } catch { /* noop */ }
+      }
+    }, 420);
+  };
+  const endPress = (fire: boolean) => {
+    if (pressTimer.current) { clearTimeout(pressTimer.current); pressTimer.current = null; }
+    if (fire && !longFired.current) setVoiceOpen(true);
+  };
 
   // Mock-auth guard — send unauthenticated users to /welcome
   useEffect(() => {
@@ -37,7 +55,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     }
   }, [location.pathname, onWelcome, navigate]);
 
-  // One-time spotlight on the FAB after onboarding
+  // One-time spotlight on the mic after onboarding
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (isAuthed() && !hasSeenSpotlight() && location.pathname === "/") {
@@ -75,9 +93,25 @@ export function AppShell({ children }: { children: ReactNode }) {
             style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
           >
             <div className="pointer-events-auto relative">
-              <FAB onClick={() => (onMoney ? setExpenseOpen(true) : setQuickOpen(true))}>
-                <Plus className="h-6 w-6" />
-              </FAB>
+              {/* Mic — tap to talk, long-press for manual quick-add */}
+              <button
+                onMouseDown={startPress}
+                onMouseUp={() => endPress(true)}
+                onMouseLeave={() => endPress(false)}
+                onTouchStart={startPress}
+                onTouchEnd={(e) => { e.preventDefault(); endPress(true); }}
+                onContextMenu={(e) => e.preventDefault()}
+                aria-label="Talk to add (long-press for menu)"
+                className="relative grid h-16 w-16 place-items-center rounded-full text-white shadow-[0_12px_28px_rgba(226,114,91,0.4)] transition-transform duration-[180ms] active:scale-95"
+                style={{ background: "var(--ours)" }}
+              >
+                {/* breathing gradient ring */}
+                <span
+                  className="pointer-events-none absolute -inset-1.5 rounded-full opacity-70 animate-pulse"
+                  style={{ background: "var(--ours)", filter: "blur(10px)" }}
+                />
+                <Mic className="relative h-6 w-6" />
+              </button>
 
               {spotlight && (
                 <>
@@ -97,10 +131,10 @@ export function AppShell({ children }: { children: ReactNode }) {
                     style={{ bottom: 172 }}
                   >
                     <div className="font-display text-[15px] font-semibold text-[color:var(--ink)]">
-                      Add anything in 5 seconds
+                      Just say it 🎙️
                     </div>
                     <div className="mt-0.5 text-[12px] text-[color:var(--ink-soft)]">
-                      Expense, wishlist, date idea, task, reminder.
+                      Tap to talk. Long-press for the manual menu.
                     </div>
                     <button
                       onClick={dismissSpotlight}
@@ -118,7 +152,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         )}
 
-        <QuickAddSheet open={quickOpen} onClose={() => setQuickOpen(false)} />
+        <VoiceSheet    open={voiceOpen}   onClose={() => setVoiceOpen(false)} />
+        <QuickAddSheet open={quickOpen}   onClose={() => setQuickOpen(false)} />
         <AddExpenseSheet open={expenseOpen} onClose={() => setExpenseOpen(false)} />
         <DevUserToggle />
       </div>
