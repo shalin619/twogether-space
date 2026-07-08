@@ -1,7 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Bell, ChevronRight, Sparkles } from "lucide-react";
+import { Bell, ChevronRight, Sparkles, LogOut } from "lucide-react";
 import { useMemo, useState } from "react";
+import { signOut } from "@/lib/mockAuth";
+
 import { format, formatDistanceToNow, isToday } from "date-fns";
 
 import {
@@ -84,6 +86,8 @@ function HomeFeed() {
   const [bellOpen, setBellOpen] = useState(false);
   const [memOpen, setMemOpen]   = useState(false);
   const [insightOpen, setInsightOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
 
   const notifications = useMemo(
     () => [
@@ -100,7 +104,13 @@ function HomeFeed() {
       {/* ---- Header moment ---- */}
       <div className="px-4 pt-3">
         <div className="flex items-center justify-between">
-          <PairedAvatar a={currentUser.avatarEmoji} b={partner.avatarEmoji} size={44} />
+          <button
+            onClick={() => setSettingsOpen(true)}
+            className="rounded-full transition-transform active:scale-[0.96]"
+            aria-label="Settings"
+          >
+            <PairedAvatar a={currentUser.avatarEmoji} b={partner.avatarEmoji} size={44} />
+          </button>
           <button
             onClick={() => setBellOpen(true)}
             className="relative grid h-10 w-10 place-items-center rounded-full bg-[color:var(--surface)] card-shadow"
@@ -113,6 +123,7 @@ function HomeFeed() {
             />
           </button>
         </div>
+
         <h1 className="mt-5 font-display text-[28px] font-bold leading-[1.15] tracking-[-0.01em] text-[color:var(--ink)]">
           Good {greeting(now)}, {currentUser.name} <span className="text-[color:var(--gold)]">☀️</span>
         </h1>
@@ -458,7 +469,10 @@ function HomeFeed() {
           ))}
         </ul>
       </BottomSheet>
+
+      <SettingsSheet open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>
+
   );
 }
 
@@ -556,4 +570,48 @@ function relativeShort(iso: string) {
   const d = new Date(iso);
   if (isToday(d)) return "this morning";
   return formatDistanceToNow(d, { addSuffix: true });
+}
+
+function SettingsSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { currentUser, partner } = useCurrentUser();
+  const navigate = useNavigate();
+  return (
+    <BottomSheet open={open} onClose={onClose} title="Settings">
+      <div className="space-y-4">
+        <div className="rounded-2xl bg-[color:var(--mist)] p-3">
+          <div className="text-[11.5px] font-semibold uppercase tracking-wide text-[color:var(--ink-soft)]">
+            Signed in as
+          </div>
+          <div className="mt-1 font-display text-[16px] font-semibold text-[color:var(--ink)]">
+            {currentUser.avatarEmoji} {currentUser.name} &amp; {partner.avatarEmoji} {partner.name}
+          </div>
+        </div>
+
+        <ul className="divide-y divide-[color:var(--line)] rounded-2xl border border-[color:var(--line)] bg-[color:var(--surface)] overflow-hidden">
+          {["Notifications", "Privacy", "Categories & tags", "Help & feedback"].map((r) => (
+            <li key={r}>
+              <button
+                onClick={() => { onClose(); }}
+                className="flex w-full min-h-12 items-center justify-between px-4 py-3 text-left text-[14px] text-[color:var(--ink)] active:bg-[color:var(--mist)]"
+              >
+                <span>{r}</span>
+                <ChevronRight className="h-4 w-4 text-[color:var(--ink-soft)]" />
+              </button>
+            </li>
+          ))}
+        </ul>
+
+        <button
+          onClick={() => {
+            signOut();
+            onClose();
+            navigate({ to: "/welcome" });
+          }}
+          className="flex w-full min-h-12 items-center justify-center gap-2 rounded-full border border-[color:var(--alert)]/40 bg-[color:var(--surface)] text-[14px] font-semibold text-[color:var(--alert)]"
+        >
+          <LogOut size={15} /> Sign out
+        </button>
+      </div>
+    </BottomSheet>
+  );
 }

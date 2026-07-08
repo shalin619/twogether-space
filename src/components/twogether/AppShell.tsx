@@ -1,11 +1,12 @@
-import { Link, useLocation } from "@tanstack/react-router";
+import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { Home, Coins, CalendarHeart, Users, ListChecks, Plus, X } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { FAB } from "./primitives";
-import { BottomSheet } from "./BottomSheet";
 import { AddExpenseSheet } from "./money/AddExpenseSheet";
+import { QuickAddSheet } from "./QuickAdd";
 import { useCurrentUser } from "@/lib/currentUser";
+import { isAuthed, hasSeenSpotlight, markSpotlightSeen } from "@/lib/mockAuth";
 
 const tabs = [
   { to: "/",       label: "Home",   Icon: Home },
@@ -20,10 +21,35 @@ const fabRoutes = new Set(["/", "/money", "/lists"]);
 export function AppShell({ children }: { children: ReactNode }) {
   const [quickOpen, setQuickOpen] = useState(false);
   const [expenseOpen, setExpenseOpen] = useState(false);
+  const [spotlight, setSpotlight] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   const showFab = fabRoutes.has(location.pathname);
   const onMoney = location.pathname === "/money";
+  const onWelcome = location.pathname.startsWith("/welcome");
 
+  // Mock-auth guard — send unauthenticated users to /welcome
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!isAuthed() && !onWelcome) {
+      navigate({ to: "/welcome" });
+    }
+  }, [location.pathname, onWelcome, navigate]);
+
+  // One-time spotlight on the FAB after onboarding
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (isAuthed() && !hasSeenSpotlight() && location.pathname === "/") {
+      const t = setTimeout(() => setSpotlight(true), 600);
+      return () => clearTimeout(t);
+    }
+  }, [location.pathname]);
+
+  const dismissSpotlight = () => { setSpotlight(false); markSpotlightSeen(); };
+
+  if (onWelcome) {
+    return <div className="min-h-[100dvh] w-full">{children}</div>;
+  }
 
   return (
     <div className="min-h-[100dvh] w-full">
@@ -34,7 +60,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         }}
       >
         <main
-          className="flex-1 overflow-y-auto pb-[104px]"
+          className="flex-1 overflow-y-auto pb-[112px]"
           style={{ paddingTop: 8 }}
         >
           {children}
@@ -44,15 +70,50 @@ export function AppShell({ children }: { children: ReactNode }) {
 
         {showFab && (
           <div
-            className="pointer-events-none fixed bottom-[76px] left-1/2 z-30 -translate-x-1/2"
+            className="pointer-events-none fixed bottom-[92px] left-1/2 z-30 -translate-x-1/2"
             style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
           >
-            <div className="pointer-events-auto">
+            <div className="pointer-events-auto relative">
               <FAB onClick={() => (onMoney ? setExpenseOpen(true) : setQuickOpen(true))}>
                 <Plus className="h-6 w-6" />
               </FAB>
-            </div>
 
+              {spotlight && (
+                <>
+                  <div
+                    className="pointer-events-auto fixed inset-0 z-40"
+                    style={{ background: "rgba(43,35,64,0.55)" }}
+                    onClick={dismissSpotlight}
+                  />
+                  <div className="pointer-events-none absolute inset-0 z-50 grid place-items-center">
+                    <span
+                      className="absolute inset-0 -m-2 animate-ping rounded-full"
+                      style={{ background: "rgba(226,114,91,0.35)" }}
+                    />
+                  </div>
+                  <div
+                    className="fixed left-1/2 z-50 w-[260px] -translate-x-1/2 rounded-2xl bg-[color:var(--surface)] p-3 text-center card-shadow animate-[fade-in_220ms_ease-out]"
+                    style={{ bottom: 172 }}
+                  >
+                    <div className="font-display text-[15px] font-semibold text-[color:var(--ink)]">
+                      Add anything in 5 seconds
+                    </div>
+                    <div className="mt-0.5 text-[12px] text-[color:var(--ink-soft)]">
+                      Expense, wishlist, date idea, task, reminder.
+                    </div>
+                    <button
+                      onClick={dismissSpotlight}
+                      className="mt-2 min-h-9 rounded-full bg-[color:var(--accent)] px-4 text-[12.5px] font-semibold text-white"
+                    >
+                      Got it
+                    </button>
+                    <span
+                      className="absolute -bottom-1.5 left-1/2 h-3 w-3 -translate-x-1/2 rotate-45 bg-[color:var(--surface)]"
+                    />
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         )}
 
@@ -104,38 +165,6 @@ function BottomNav() {
         ))}
       </ul>
     </nav>
-  );
-}
-
-function QuickAddSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const rows = [
-    { icon: "💸", title: "Expense",       hint: "Log a transaction" },
-    { icon: "🎁", title: "Wishlist item", hint: "Add to your wishlist" },
-    { icon: "💞", title: "Date idea",     hint: "Save for later" },
-    { icon: "✅", title: "Task",          hint: "Assign to you or partner" },
-    { icon: "⏰", title: "Reminder",      hint: "Bill, occasion, anything" },
-  ];
-  return (
-    <BottomSheet open={open} onClose={onClose} title="Quick add">
-      <ul className="flex flex-col gap-2">
-        {rows.map((r) => (
-          <li key={r.title}>
-            <button
-              onClick={onClose}
-              className="flex w-full items-center gap-4 rounded-[16px] border border-[color:var(--line)] bg-[color:var(--surface)] p-4 text-left transition-colors duration-[180ms] active:bg-[color:var(--mist)]"
-            >
-              <span className="grid h-11 w-11 place-items-center rounded-full bg-[color:var(--blush)] text-xl">
-                {r.icon}
-              </span>
-              <span className="flex-1">
-                <span className="block text-[15px] font-bold text-[color:var(--ink)]">{r.title}</span>
-                <span className="block text-[12.5px] text-[color:var(--ink-soft)]">{r.hint}</span>
-              </span>
-            </button>
-          </li>
-        ))}
-      </ul>
-    </BottomSheet>
   );
 }
 

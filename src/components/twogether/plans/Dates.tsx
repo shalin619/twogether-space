@@ -296,12 +296,13 @@ function FilterChip({ label, active, onClick }: { label: string; active: boolean
   );
 }
 
-function SaveIdeaSheet({
+export function SaveIdeaSheet({
   open, onClose, onAdd,
 }: {
   open: boolean; onClose: () => void;
   onAdd: (p: Omit<DateIdea, "id">) => Promise<void>;
 }) {
+
   const [url, setUrl] = useState("");
   const [title, setTitle] = useState("");
   const [enriching, setEnriching] = useState(false);
