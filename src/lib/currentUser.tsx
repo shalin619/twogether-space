@@ -28,6 +28,7 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try { localStorage.setItem(STORAGE_KEY, currentUserId); } catch { /* ignore */ }
+    setViewer(currentUserId);
   }, [currentUserId]);
 
   const currentUser = seedProfiles.find((p) => p.id === currentUserId)!;
