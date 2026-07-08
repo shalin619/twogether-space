@@ -121,7 +121,7 @@ function Group({
                 </div>
               </div>
               {waitingOnPartner && (
-                <Chip tone="caution">Waiting for {partnerName} ⏳</Chip>
+                <Chip tone="gold">Waiting for {partnerName} ⏳</Chip>
               )}
             </Card>
           );
