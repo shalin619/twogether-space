@@ -571,3 +571,47 @@ function relativeShort(iso: string) {
   if (isToday(d)) return "this morning";
   return formatDistanceToNow(d, { addSuffix: true });
 }
+
+function SettingsSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { currentUser, partner } = useCurrentUser();
+  const navigate = useNavigate();
+  return (
+    <BottomSheet open={open} onClose={onClose} title="Settings">
+      <div className="space-y-4">
+        <div className="rounded-2xl bg-[color:var(--mist)] p-3">
+          <div className="text-[11.5px] font-semibold uppercase tracking-wide text-[color:var(--ink-soft)]">
+            Signed in as
+          </div>
+          <div className="mt-1 font-display text-[16px] font-semibold text-[color:var(--ink)]">
+            {currentUser.avatarEmoji} {currentUser.name} &amp; {partner.avatarEmoji} {partner.name}
+          </div>
+        </div>
+
+        <ul className="divide-y divide-[color:var(--line)] rounded-2xl border border-[color:var(--line)] bg-[color:var(--surface)] overflow-hidden">
+          {["Notifications", "Privacy", "Categories & tags", "Help & feedback"].map((r) => (
+            <li key={r}>
+              <button
+                onClick={() => { onClose(); }}
+                className="flex w-full min-h-12 items-center justify-between px-4 py-3 text-left text-[14px] text-[color:var(--ink)] active:bg-[color:var(--mist)]"
+              >
+                <span>{r}</span>
+                <ChevronRight className="h-4 w-4 text-[color:var(--ink-soft)]" />
+              </button>
+            </li>
+          ))}
+        </ul>
+
+        <button
+          onClick={() => {
+            signOut();
+            onClose();
+            navigate({ to: "/welcome" });
+          }}
+          className="flex w-full min-h-12 items-center justify-center gap-2 rounded-full border border-[color:var(--alert)]/40 bg-[color:var(--surface)] text-[14px] font-semibold text-[color:var(--alert)]"
+        >
+          <LogOut size={15} /> Sign out
+        </button>
+      </div>
+    </BottomSheet>
+  );
+}
