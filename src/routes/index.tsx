@@ -469,7 +469,10 @@ function HomeFeed() {
           ))}
         </ul>
       </BottomSheet>
+
+      <SettingsSheet open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>
+
   );
 }
 
