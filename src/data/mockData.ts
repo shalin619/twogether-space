@@ -426,13 +426,20 @@ export const dailyQuestionHistory: DailyQuestion[] = [
 
 // ---------- Check-ins ----------
 export const checkIns: CheckIn[] = [
-  { id: "ci1", date: daysAgo(0),  ownerId: "meera", mood: 4 },
-  { id: "ci2", date: daysAgo(1),  ownerId: "aarav", mood: 5 },
-  { id: "ci3", date: daysAgo(7),  ownerId: "meera", mood: 4 },
-  { id: "ci4", date: daysAgo(7),  ownerId: "aarav", mood: 4 },
-  { id: "ci5", date: daysAgo(14), ownerId: "meera", mood: 3, note: "Deadline week" },
-  { id: "ci6", date: daysAgo(14), ownerId: "aarav", mood: 4 },
+  { id: "ci1", date: daysAgo(7),  ownerId: "meera", mood: 4, usScore: 5, energy: 3,
+    highlight: "Sunday morning walk at Carter Road ☀️", need: "One quiet evening this week." },
+  { id: "ci2", date: daysAgo(7),  ownerId: "aarav", mood: 5, usScore: 5, energy: 4,
+    highlight: "You made chai without me asking 🤍", need: "Help planning mom's gift." },
+  { id: "ci3", date: daysAgo(14), ownerId: "meera", mood: 3, usScore: 4, energy: 2,
+    highlight: "Ramen night saved a hard week.", need: "A slower Saturday." },
+  { id: "ci4", date: daysAgo(14), ownerId: "aarav", mood: 4, usScore: 4, energy: 3,
+    highlight: "Our budget check-in felt easy this time.", need: "More gym mornings together." },
+  { id: "ci5", date: daysAgo(21), ownerId: "meera", mood: 4, usScore: 5, energy: 4,
+    highlight: "The Prithvi play — best surprise.", need: "Nothing this week 🌿" },
+  { id: "ci6", date: daysAgo(21), ownerId: "aarav", mood: 4, usScore: 5, energy: 4,
+    highlight: "Cooking biryani together on Sunday.", need: "One phone-free dinner." },
 ];
+
 
 // ---------- Insights ----------
 export const insights: Insight[] = [

@@ -277,8 +277,13 @@ export interface CheckIn {
   date: string;
   ownerId: OwnerId;
   mood: 1 | 2 | 3 | 4 | 5;
+  usScore?: 1 | 2 | 3 | 4 | 5;
+  energy?: 1 | 2 | 3 | 4 | 5;
+  highlight?: string;
+  need?: string;
   note?: string;
 }
+
 
 export interface Insight {
   id: string;
