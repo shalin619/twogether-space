@@ -364,12 +364,13 @@ function GiftLockerSheet({
 // ------ Add wishlist sheet ------
 type AddMode = "link" | "photo" | "vibe";
 
-function AddWishlistSheet({
+export function AddWishlistSheet({
   open, onClose, onAdd,
 }: {
   open: boolean; onClose: () => void;
   onAdd: (p: Omit<WishlistItem, "id" | "ownerId">) => Promise<void>;
 }) {
+
   const [mode, setMode] = useState<AddMode>("link");
   const [url, setUrl]     = useState("");
   const [title, setTitle] = useState("");
