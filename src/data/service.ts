@@ -368,6 +368,14 @@ export async function addMemory(m: Omit<Memory, "id">) {
   store.memories = [record, ...store.memories];
   return delay(record);
 }
+export async function updateMemoryNote(id: string, byUserId: OwnerId, text: string) {
+  const key = byUserId === "aarav" ? "privateNoteAarav" : "privateNoteMeera";
+  store.memories = store.memories.map((m) =>
+    m.id === id ? { ...m, [key]: text } : m,
+  );
+  return delay(true);
+}
+
 
 // ---------- Writes: relationship ----------
 export async function sendGratitude(byUserId: OwnerId, text: string) {
