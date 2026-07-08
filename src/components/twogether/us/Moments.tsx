@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { format, parseISO, differenceInCalendarDays } from "date-fns";
 import { toast } from "sonner";
 import { Plus, X, Lock, Flag } from "lucide-react";
@@ -152,12 +152,45 @@ export function Moments() {
 function MemoryCard({
   m, tall, onOpen,
 }: { m: Memory; tall?: boolean; onOpen: () => void }) {
+  const [hearts, setHearts] = useState<{ id: number; left: number; delay: number }[]>([]);
+  const timer = useRef<number | null>(null);
+  const longPressed = useRef(false);
+
+  function fireHearts() {
+    longPressed.current = true;
+    const next = Array.from({ length: 7 }).map((_, i) => ({
+      id: Date.now() + i,
+      left: 40 + Math.random() * 20,
+      delay: i * 60,
+    }));
+    setHearts(next);
+    window.setTimeout(() => setHearts([]), 1400);
+  }
+  function start() {
+    longPressed.current = false;
+    timer.current = window.setTimeout(fireHearts, 420);
+  }
+  function cancel() {
+    if (timer.current) { window.clearTimeout(timer.current); timer.current = null; }
+  }
+
   return (
     <button
-      onClick={onOpen}
+      onClick={() => { if (!longPressed.current) onOpen(); }}
+      onPointerDown={start}
+      onPointerUp={cancel}
+      onPointerCancel={cancel}
+      onPointerLeave={cancel}
       className="group relative overflow-hidden rounded-[18px] text-left"
       style={{ aspectRatio: tall ? "3/4" : "1/1" }}
     >
+      <style>{`
+        @keyframes heart-burst-kf {
+          0%   { transform: translate(0,0) scale(0.5); opacity: 0; }
+          25%  { opacity: 1; }
+          100% { transform: translate(0,-70px) scale(1.4); opacity: 0; }
+        }
+      `}</style>
       <div
         className="absolute inset-0 bg-cover bg-center transition-transform duration-300 group-active:scale-[1.02]"
         style={{ backgroundImage: `url(${m.photo})` }}
@@ -186,6 +219,18 @@ function MemoryCard({
           {format(parseISO(m.date), "d MMM yyyy")}
         </div>
       </div>
+      {hearts.map((h) => (
+        <span
+          key={h.id}
+          className="pointer-events-none absolute bottom-6 text-[22px]"
+          style={{
+            left: `${h.left}%`,
+            animation: `heart-burst-kf 900ms ${h.delay}ms ease-out forwards`,
+          }}
+        >
+          ❤️
+        </span>
+      ))}
     </button>
   );
 }

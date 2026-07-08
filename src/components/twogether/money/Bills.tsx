@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { format, differenceInCalendarDays, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay } from "date-fns";
 import { Plus, Check } from "lucide-react";
 import { Card } from "@/components/twogether/primitives";
@@ -140,7 +141,11 @@ function AddBillSheet({ open, onClose }: { open: boolean; onClose: () => void })
     <BottomSheet
       open={open} onClose={onClose} title="Add bill"
       primaryCta={
-        <button className="w-full rounded-[14px] py-3 text-[14px] font-bold text-white" style={{ background: "var(--accent)" }}>
+        <button
+          onClick={() => { toast.success("Bill saved 💌"); onClose(); }}
+          className="w-full min-h-12 rounded-[14px] py-3 text-[14px] font-bold text-white"
+          style={{ background: "var(--accent)" }}
+        >
           Save bill
         </button>
       }

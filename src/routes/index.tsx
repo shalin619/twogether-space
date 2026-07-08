@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Bell, ChevronRight, Sparkles, LogOut } from "lucide-react";
 import { useMemo, useState } from "react";
 import { signOut } from "@/lib/mockAuth";
+import { comingSoon } from "@/lib/comingSoon";
 
 import { format, formatDistanceToNow, isToday } from "date-fns";
 
@@ -25,7 +26,9 @@ export const Route = createFileRoute("/")({
 
 function HomeFeed() {
   const { currentUser, partner, currentUserId } = useCurrentUser();
+  const navigate = useNavigate();
   const now = new Date();
+
 
   const gratitudeQ = useQuery({ queryKey: ["gratitude"],    queryFn: getGratitudeNotes });
   const billsQ     = useQuery({ queryKey: ["bills"],        queryFn: getBills });
@@ -87,17 +90,22 @@ function HomeFeed() {
   const [memOpen, setMemOpen]   = useState(false);
   const [insightOpen, setInsightOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [notifRead, setNotifRead] = useState(false);
 
 
-  const notifications = useMemo(
+  // Batched digest — group partner activity by kind and show counts only,
+  // never itemised private info. Mirrors what a real digest job would emit.
+  type Digest = { id: string; who: string; text: string; when: string; tone: "partner" | "app" };
+  const notifications = useMemo<Digest[]>(
     () => [
-      { id: "n1", who: partner.name, text: "added 2 wishlist items", when: "2h" },
-      { id: "n2", who: partner.name, text: "logged ₹1,840 to Groceries",            when: "5h" },
-      { id: "n3", who: partner.name, text: `sent you a gratitude note 💌`,          when: "6h" },
-      { id: "n4", who: "Twogether",  text: "Weekly Brief is ready",                 when: "1d" },
+      { id: "n1", who: partner.name, text: "added 2 wishlist items", when: "yesterday", tone: "partner" },
+      { id: "n2", who: partner.name, text: "logged 3 shared expenses", when: "yesterday", tone: "partner" },
+      { id: "n3", who: partner.name, text: `sent you a gratitude note 💌`, when: "6h", tone: "partner" },
+      { id: "n4", who: "Twogether",  text: "Your Weekly Brief is ready", when: "1d", tone: "app" },
     ],
     [partner.name],
   );
+  const unreadCount = notifRead ? 0 : notifications.length;
 
   return (
     <div className="pb-6">
@@ -113,14 +121,18 @@ function HomeFeed() {
           </button>
           <button
             onClick={() => setBellOpen(true)}
-            className="relative grid h-10 w-10 place-items-center rounded-full bg-[color:var(--surface)] card-shadow"
-            aria-label="Notifications"
+            className="relative grid h-11 w-11 place-items-center rounded-full bg-[color:var(--surface)] card-shadow"
+            aria-label={`Notifications${unreadCount ? `, ${unreadCount} new` : ""}`}
           >
             <Bell className="h-[18px] w-[18px] text-[color:var(--ink)]" />
-            <span
-              className="absolute right-2 top-2 h-2 w-2 rounded-full"
-              style={{ background: "var(--accent)" }}
-            />
+            {unreadCount > 0 && (
+              <span
+                className="absolute right-1.5 top-1.5 grid min-h-4 min-w-4 place-items-center rounded-full px-1 text-[9px] font-bold text-white"
+                style={{ background: "var(--accent)" }}
+              >
+                {unreadCount}
+              </span>
+            )}
           </button>
         </div>
 
@@ -221,7 +233,10 @@ function HomeFeed() {
               <BriefRow icon="🌴" text={<><b>Bali fund</b> +₹8,000 → 43%</>} />
             </ul>
 
-            <button className="mt-3 flex w-full items-center justify-between rounded-[14px] bg-[color:var(--blush)] px-4 py-3 text-[13.5px] font-bold text-[color:var(--ink)]">
+            <button
+              onClick={() => navigate({ to: "/plans" })}
+              className="mt-3 flex w-full min-h-11 items-center justify-between rounded-[14px] bg-[color:var(--blush)] px-4 py-3 text-[13.5px] font-bold text-[color:var(--ink)]"
+            >
               Plan something for Saturday
               <ChevronRight className="h-4 w-4" />
             </button>
@@ -249,7 +264,8 @@ function HomeFeed() {
             {(ideasQ.data ?? []).slice(0, 3).map((idea) => (
               <button
                 key={idea.id}
-                className="shrink-0 rounded-full border border-[color:var(--line)] bg-[color:var(--surface)] px-3 py-2 text-[12.5px] font-semibold text-[color:var(--ink)]"
+                onClick={() => navigate({ to: "/plans" })}
+                className="min-h-11 shrink-0 rounded-full border border-[color:var(--line)] bg-[color:var(--surface)] px-3 py-2 text-[12.5px] font-semibold text-[color:var(--ink)]"
               >
                 {vibeEmoji(idea.vibe)} {idea.title}
               </button>
@@ -257,7 +273,8 @@ function HomeFeed() {
           </div>
 
           <button
-            className="mt-4 w-full rounded-[14px] py-3 text-[14px] font-bold text-white transition-transform duration-[180ms] active:scale-[0.99]"
+            onClick={() => navigate({ to: "/plans" })}
+            className="mt-4 w-full min-h-11 rounded-[14px] py-3 text-[14px] font-bold text-white transition-transform duration-[180ms] active:scale-[0.99]"
             style={{ background: "var(--accent)" }}
           >
             Find us a time
@@ -388,7 +405,8 @@ function HomeFeed() {
               className="flex-1 rounded-full border border-[color:var(--line)] bg-[color:var(--surface)] px-4 py-3 text-[14px] outline-none focus:border-[color:var(--accent)]"
             />
             <button
-              className="rounded-full px-4 py-3 text-[13px] font-bold text-white"
+              onClick={() => { comingSoon("Reply to gratitude"); setGratOpen(false); }}
+              className="min-h-11 rounded-full px-4 py-3 text-[13px] font-bold text-white"
               style={{ background: "var(--ours)" }}
             >
               Send 💌
@@ -408,27 +426,48 @@ function HomeFeed() {
       </BottomSheet>
 
       <BottomSheet open={bellOpen} onClose={() => setBellOpen(false)} title="This week's digest">
-        <ul className="flex flex-col gap-2">
-          {notifications.map((n) => (
-            <li
-              key={n.id}
-              className="flex items-start gap-3 rounded-[14px] border border-[color:var(--line)] bg-[color:var(--surface)] p-3"
-            >
-              <span
-                className="mt-1 h-2 w-2 shrink-0 rounded-full"
-                style={{ background: n.who === partner.name ? "var(--accent-2)" : "var(--gold)" }}
-              />
-              <div className="flex-1">
-                <div className="text-[13.5px] text-[color:var(--ink)]">
-                  <b>{n.who}</b> {n.text}
+        <div className="mb-3 flex items-center justify-between">
+          <span className="text-[12px] text-[color:var(--ink-soft)]">
+            Batched · never more than a handful a day
+          </span>
+          <button
+            onClick={() => setNotifRead(true)}
+            disabled={notifRead}
+            className="min-h-9 rounded-full bg-[color:var(--mist)] px-3 text-[12px] font-semibold text-[color:var(--ink)] disabled:opacity-40"
+          >
+            {notifRead ? "All caught up ✓" : "Mark all read"}
+          </button>
+        </div>
+        {notifications.length === 0 ? (
+          <div className="rounded-[16px] bg-[color:var(--mist)] p-6 text-center">
+            <div className="mb-2 text-3xl">🤍</div>
+            <div className="text-[13.5px] text-[color:var(--ink-soft)]">
+              All quiet. Enjoy each other.
+            </div>
+          </div>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {notifications.map((n) => (
+              <li
+                key={n.id}
+                className="flex items-start gap-3 rounded-[14px] border border-[color:var(--line)] bg-[color:var(--surface)] p-3"
+              >
+                <span
+                  className="mt-1 h-2 w-2 shrink-0 rounded-full"
+                  style={{ background: n.tone === "partner" ? "var(--accent-2)" : "var(--gold)" }}
+                />
+                <div className="flex-1">
+                  <div className="text-[13.5px] text-[color:var(--ink)]">
+                    <b>{n.who}</b> {n.text}
+                  </div>
+                  <div className="mt-0.5 text-[11.5px] text-[color:var(--ink-soft)]">{n.when}</div>
                 </div>
-                <div className="mt-0.5 text-[11.5px] text-[color:var(--ink-soft)]">{n.when} ago</div>
-              </div>
-            </li>
-          ))}
-        </ul>
+              </li>
+            ))}
+          </ul>
+        )}
         <p className="mt-4 text-center text-[11.5px] text-[color:var(--ink-soft)]">
-          Private items are never shown here.
+          Private items and amounts are never shown here.
         </p>
       </BottomSheet>
 
@@ -575,31 +614,136 @@ function relativeShort(iso: string) {
 function SettingsSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { currentUser, partner } = useCurrentUser();
   const navigate = useNavigate();
+  const [notif, setNotif] = useState({ digest: true, gratitude: true, money: false });
+  const [currency, setCurrency] = useState<"INR" | "USD" | "EUR">("INR");
+
   return (
     <BottomSheet open={open} onClose={onClose} title="Settings">
-      <div className="space-y-4">
-        <div className="rounded-2xl bg-[color:var(--mist)] p-3">
-          <div className="text-[11.5px] font-semibold uppercase tracking-wide text-[color:var(--ink-soft)]">
-            Signed in as
+      <div className="space-y-5">
+        {/* Profile row */}
+        <div className="flex items-center gap-3 rounded-2xl bg-[color:var(--mist)] p-3">
+          <div className="grid h-12 w-12 place-items-center rounded-full bg-[color:var(--surface)] text-[26px]">
+            {currentUser.avatarEmoji}
           </div>
-          <div className="mt-1 font-display text-[16px] font-semibold text-[color:var(--ink)]">
-            {currentUser.avatarEmoji} {currentUser.name} &amp; {partner.avatarEmoji} {partner.name}
+          <div className="min-w-0 flex-1">
+            <div className="font-display text-[15.5px] font-semibold text-[color:var(--ink)]">
+              {currentUser.name}
+            </div>
+            <div className="text-[12px] text-[color:var(--ink-soft)]">Your profile</div>
+          </div>
+          <button
+            onClick={() => comingSoon("Edit profile")}
+            className="min-h-11 rounded-full bg-[color:var(--surface)] px-3 text-[12.5px] font-semibold text-[color:var(--ink)]"
+          >
+            Edit
+          </button>
+        </div>
+
+        {/* Partner card */}
+        <div className="rounded-2xl border border-[color:var(--line)] bg-[color:var(--surface)] p-3">
+          <div className="text-[11.5px] font-semibold uppercase tracking-wide text-[color:var(--ink-soft)]">
+            Your space
+          </div>
+          <div className="mt-2 flex items-center gap-3">
+            <div className="grid h-10 w-10 place-items-center rounded-full bg-[color:var(--blush)] text-[20px]">
+              {partner.avatarEmoji}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-[14px] font-semibold text-[color:var(--ink)]">
+                Paired with {partner.name}
+              </div>
+              <div className="text-[11.5px] text-[color:var(--ink-soft)]">
+                Together since day one 🤍
+              </div>
+            </div>
+            <button
+              onClick={() => comingSoon("Manage pairing")}
+              className="min-h-11 rounded-full bg-[color:var(--mist)] px-3 text-[12px] font-semibold text-[color:var(--ink)]"
+            >
+              Manage
+            </button>
           </div>
         </div>
 
-        <ul className="divide-y divide-[color:var(--line)] rounded-2xl border border-[color:var(--line)] bg-[color:var(--surface)] overflow-hidden">
-          {["Notifications", "Privacy", "Categories & tags", "Help & feedback"].map((r) => (
-            <li key={r}>
+        {/* Currency */}
+        <div className="rounded-2xl border border-[color:var(--line)] bg-[color:var(--surface)] p-3">
+          <div className="mb-2 text-[11.5px] font-semibold uppercase tracking-wide text-[color:var(--ink-soft)]">
+            Currency
+          </div>
+          <div className="flex gap-2">
+            {(["INR", "USD", "EUR"] as const).map((c) => (
               <button
-                onClick={() => { onClose(); }}
-                className="flex w-full min-h-12 items-center justify-between px-4 py-3 text-left text-[14px] text-[color:var(--ink)] active:bg-[color:var(--mist)]"
+                key={c}
+                onClick={() => setCurrency(c)}
+                className={cn(
+                  "min-h-11 flex-1 rounded-full text-[13px] font-semibold",
+                  currency === c
+                    ? "bg-[color:var(--ink)] text-white"
+                    : "bg-[color:var(--mist)] text-[color:var(--ink)]",
+                )}
               >
-                <span>{r}</span>
-                <ChevronRight className="h-4 w-4 text-[color:var(--ink-soft)]" />
+                {c === "INR" ? "₹ INR" : c === "USD" ? "$ USD" : "€ EUR"}
               </button>
-            </li>
+            ))}
+          </div>
+        </div>
+
+        {/* Notifications */}
+        <div className="rounded-2xl border border-[color:var(--line)] bg-[color:var(--surface)] p-3">
+          <div className="mb-2 flex items-center justify-between">
+            <div className="text-[11.5px] font-semibold uppercase tracking-wide text-[color:var(--ink-soft)]">
+              Notifications
+            </div>
+            <span className="text-[11px] text-[color:var(--ink-soft)]">
+              We'll never send more than 3 a day 🤍
+            </span>
+          </div>
+          {([
+            ["digest",    "Weekly digest"],
+            ["gratitude", "Gratitude notes"],
+            ["money",     "Money nudges"],
+          ] as const).map(([k, label]) => (
+            <label key={k} className="flex min-h-12 items-center justify-between border-t border-[color:var(--line)]/60 px-1 py-2 first:border-t-0">
+              <span className="text-[13.5px] text-[color:var(--ink)]">{label}</span>
+              <input
+                type="checkbox"
+                checked={notif[k]}
+                onChange={(e) => setNotif((n) => ({ ...n, [k]: e.target.checked }))}
+                className="h-5 w-5 accent-[color:var(--accent)]"
+              />
+            </label>
           ))}
-        </ul>
+        </div>
+
+        {/* Privacy explainer */}
+        <div className="rounded-2xl border border-[color:var(--line)] bg-[color:var(--blush)]/50 p-4">
+          <div className="text-[13.5px] font-bold text-[color:var(--ink)]">
+            How privacy works
+          </div>
+          <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+            {[
+              { icon: "🔒", label: "Private", body: "Only you." },
+              { icon: "👀", label: "Visible", body: "Partner can peek." },
+              { icon: "🤝", label: "Shared", body: "Yours together." },
+            ].map((d) => (
+              <div key={d.label} className="rounded-xl bg-[color:var(--surface)] p-2.5">
+                <div className="text-xl">{d.icon}</div>
+                <div className="mt-1 text-[11.5px] font-bold text-[color:var(--ink)]">{d.label}</div>
+                <div className="mt-0.5 text-[10.5px] text-[color:var(--ink-soft)]">{d.body}</div>
+              </div>
+            ))}
+          </div>
+          <p className="mt-3 text-[11.5px] leading-relaxed text-[color:var(--ink-soft)]">
+            Gift plans, wishlists you've claimed, and private notes never surface to your partner —
+            even in totals, digests, or search.
+          </p>
+        </div>
+
+        {/* Dev toggle note */}
+        <div className="rounded-2xl border border-dashed border-[color:var(--line)] p-3 text-[11.5px] text-[color:var(--ink-soft)]">
+          Dev tip: use the <b>A / M</b> pill in the bottom-left to swap viewpoints and see how
+          privacy behaves in real time.
+        </div>
 
         <button
           onClick={() => {

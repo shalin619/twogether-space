@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 import { format } from "date-fns";
 import { Search, Gift, MessageCircle } from "lucide-react";
-import { Chip, SkeletonCard } from "@/components/twogether/primitives";
+import { Chip, SkeletonCard, EmptyState } from "@/components/twogether/primitives";
 import { BottomSheet } from "@/components/twogether/BottomSheet";
 import { getCategories, getTransactions } from "@/data/service";
 import { useCurrentUser } from "@/lib/currentUser";
@@ -92,11 +93,15 @@ export function Activity() {
 
       {/* List */}
       <div className="mt-4 px-4">
-        {txQ.isLoading && <SkeletonCard height={200} />}
+        {txQ.isLoading && (
+          <div className="flex flex-col gap-2">
+            <SkeletonCard height={72} />
+            <SkeletonCard height={72} />
+            <SkeletonCard height={72} />
+          </div>
+        )}
         {!txQ.isLoading && groups.length === 0 && (
-          <p className="mt-8 text-center text-[13px] text-[color:var(--ink-soft)]">
-            Nothing here yet.
-          </p>
+          <EmptyState emoji="☕" line="Your money story starts with one expense ☕" />
         )}
         {groups.map(([day, items]) => (
           <div key={day} className="mb-4">
@@ -242,7 +247,11 @@ function TxDetailSheet({
             })}
             <div className="mt-2 flex gap-2 text-[16px]">
               {["🤍", "🙌", "😂", "👀"].map((e) => (
-                <button key={e} className="grid h-8 w-8 place-items-center rounded-full bg-[color:var(--mist)]">
+                <button
+                  key={e}
+                  onClick={() => toast(`${e} noted`, { duration: 1200 })}
+                  className="grid h-9 w-9 min-h-11 min-w-11 place-items-center rounded-full bg-[color:var(--mist)]"
+                >
                   {e}
                 </button>
               ))}

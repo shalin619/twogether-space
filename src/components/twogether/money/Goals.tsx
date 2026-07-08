@@ -1,21 +1,29 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { Plus } from "lucide-react";
 import { AmountText, Card, ProgressBar } from "@/components/twogether/primitives";
 import { BottomSheet } from "@/components/twogether/BottomSheet";
 import { Confetti } from "@/components/twogether/Confetti";
 import { PrivacyDial } from "@/components/twogether/primitives";
-import { getGoals, getGoalContributions } from "@/data/service";
+import { comingSoon } from "@/lib/comingSoon";
+import { addGoalContribution, getGoals, getGoalContributions } from "@/data/service";
+import { useCurrentUser } from "@/lib/currentUser";
 import { format } from "date-fns";
 
 export function Goals() {
+  const qc = useQueryClient();
+  const { currentUserId } = useCurrentUser();
   const goalsQ = useQuery({ queryKey: ["goals"], queryFn: getGoals });
   const contribQ = useQuery({ queryKey: ["goalContributions"], queryFn: getGoalContributions });
 
   const [addOpen, setAddOpen]         = useState(false);
   const [contribOpen, setContribOpen] = useState<string | null>(null);
+  const [contribAmount, setContribAmount] = useState(5000);
   const [privacy, setPrivacy]         = useState<"private"|"visible"|"shared">("shared");
   const [emoji, setEmoji]             = useState("🌱");
+  // Track most-recent crossing per goal so <Confetti /> fires exactly once
+  const [crossing, setCrossing] = useState<Record<string, number>>({});
 
   const contribBy = (goalId: string) => {
     const cs = (contribQ.data ?? []).filter((c) => c.goalId === goalId);
@@ -31,9 +39,11 @@ export function Goals() {
           const pct = Math.round((g.saved / g.target) * 100);
           const complete = pct >= 100;
           const { a, m } = contribBy(g.id);
+          const crossedPct = crossing[g.id];
           return (
             <Card key={g.id} className="relative overflow-hidden p-5">
               {complete && <Confetti fireKey={`goal_complete_${g.id}`} />}
+              {crossedPct && <Confetti fireKey={`goal_${g.id}_${crossedPct}`} /> }
               <div className="flex items-center gap-3">
                 <span className="grid h-12 w-12 place-items-center rounded-[14px] bg-[color:var(--blush)] text-2xl">
                   {g.emoji}
@@ -94,18 +104,48 @@ export function Goals() {
         onClose={() => setContribOpen(null)}
         title="Add money"
         primaryCta={
-          <button className="w-full rounded-[14px] py-3 text-[14px] font-bold text-white" style={{ background: "var(--ours)" }}>
-            Contribute
+          <button
+            onClick={async () => {
+              if (!contribOpen) return;
+              const goal = (goalsQ.data ?? []).find((g) => g.id === contribOpen);
+              if (!goal) return;
+              const before = goal.saved;
+              const after = before + contribAmount;
+              await addGoalContribution(contribOpen, currentUserId, contribAmount);
+              await qc.invalidateQueries({ queryKey: ["goals"] });
+              await qc.invalidateQueries({ queryKey: ["goalContributions"] });
+              // Fire confetti on crossing 25/50/75/100
+              const beforePct = (before / goal.target) * 100;
+              const afterPct  = (after / goal.target) * 100;
+              const crossed = [25, 50, 75, 100].find(
+                (t) => beforePct < t && afterPct >= t,
+              );
+              if (crossed) {
+                setCrossing((c) => ({ ...c, [contribOpen]: crossed }));
+                toast.success(`🎉 ${crossed}% saved — ${goal.name}`);
+              } else {
+                toast.success(`+₹${contribAmount.toLocaleString("en-IN")} added`);
+              }
+              setContribOpen(null);
+            }}
+            className="w-full min-h-12 rounded-[14px] py-3 text-[14px] font-bold text-white"
+            style={{ background: "var(--ours)" }}
+          >
+            Contribute ₹{contribAmount.toLocaleString("en-IN")}
           </button>
         }
       >
         <div className="text-center">
           <div className="text-[12.5px] uppercase tracking-[0.08em] text-[color:var(--ink-soft)]">Amount</div>
-          <div className="mt-2"><AmountText value={5000} size={40} /></div>
+          <div className="mt-2"><AmountText value={contribAmount} size={40} /></div>
         </div>
         <div className="mt-4 flex justify-center gap-2">
           {[1000, 2500, 5000, 10000].map((n) => (
-            <button key={n} className="rounded-full bg-[color:var(--mist)] px-3 py-1.5 text-[12.5px] font-semibold">
+            <button
+              key={n}
+              onClick={() => setContribAmount(n)}
+              className={`min-h-11 rounded-full px-3 py-1.5 text-[12.5px] font-semibold ${contribAmount===n?"bg-[color:var(--ink)] text-white":"bg-[color:var(--mist)] text-[color:var(--ink)]"}`}
+            >
               ₹{n.toLocaleString("en-IN")}
             </button>
           ))}
@@ -118,7 +158,11 @@ export function Goals() {
         onClose={() => setAddOpen(false)}
         title="New goal"
         primaryCta={
-          <button className="w-full rounded-[14px] py-3 text-[14px] font-bold text-white" style={{ background: "var(--accent)" }}>
+          <button
+            onClick={() => { comingSoon("New goal"); setAddOpen(false); }}
+            className="w-full min-h-12 rounded-[14px] py-3 text-[14px] font-bold text-white"
+            style={{ background: "var(--accent)" }}
+          >
             Create goal
           </button>
         }

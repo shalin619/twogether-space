@@ -1,10 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { toast } from "sonner";
 import { ChevronRight, ArrowRight } from "lucide-react";
 import { AmountText, Card, ProgressBar } from "@/components/twogether/primitives";
 import { BottomSheet } from "@/components/twogether/BottomSheet";
+import { comingSoon } from "@/lib/comingSoon";
 import {
-  getMonthBudget, getRunningBalance, getTransactions, getInsights,
+  getMonthBudget, getRunningBalance, getTransactions, getInsights, settleUp,
 } from "@/data/service";
 import { useCurrentUser } from "@/lib/currentUser";
 
@@ -76,31 +78,48 @@ export function Overview() {
       </Card>
 
       {/* Settle-up */}
-      <div
-        className="rounded-[20px] border p-4"
-        style={{ background: "#E4EEE9", borderColor: "#CFE0D8" }}
-      >
-        <div className="text-[12.5px] uppercase tracking-[0.08em] text-[color:var(--accent-2)]">
-          Running balance
-        </div>
-        <div className="mt-1 text-[15.5px] font-bold text-[color:var(--ink)]">
-          {partner.name} owes you{" "}
-          <span className="font-display text-[20px] text-[color:var(--accent-2)]">
-            ₹{(balQ.data?.amount ?? 2340).toLocaleString("en-IN")}
-          </span>
-        </div>
-        <div className="mt-3 flex gap-2">
-          <button
-            className="flex-1 rounded-[12px] py-2.5 text-[13px] font-bold text-white"
-            style={{ background: "var(--accent-2)" }}
+      {(() => {
+        const bal    = balQ.data;
+        const amount = bal?.amount ?? 0;
+        const settled = amount === 0;
+        const viewerIsCreditor = bal?.owedTo === currentUser.id;
+        return (
+          <div
+            className="rounded-[20px] border p-4"
+            style={{ background: "#E4EEE9", borderColor: "#CFE0D8" }}
           >
-            Settle via UPI
-          </button>
-          <button className="flex-1 rounded-[12px] border border-[color:var(--accent-2)]/40 bg-white/60 py-2.5 text-[13px] font-bold text-[color:var(--accent-2)]">
-            History
-          </button>
-        </div>
-      </div>
+            <div className="text-[12.5px] uppercase tracking-[0.08em] text-[color:var(--accent-2)]">
+              Running balance
+            </div>
+            <div className="mt-1 text-[15.5px] font-bold text-[color:var(--ink)]">
+              {settled
+                ? "You're all settled up 🤍"
+                : viewerIsCreditor
+                  ? <>{partner.name} owes you <span className="font-display text-[20px] text-[color:var(--accent-2)]">₹{amount.toLocaleString("en-IN")}</span></>
+                  : <>You owe {partner.name} <span className="font-display text-[20px] text-[color:var(--accent-2)]">₹{amount.toLocaleString("en-IN")}</span></>}
+            </div>
+            <div className="mt-3 flex gap-2">
+              <button
+                disabled={settled}
+                onClick={async () => {
+                  await settleUp(amount, "UPI");
+                  toast.success("Settled via UPI ✓");
+                }}
+                className="flex-1 min-h-11 rounded-[12px] py-2.5 text-[13px] font-bold text-white disabled:opacity-40"
+                style={{ background: "var(--accent-2)" }}
+              >
+                {settled ? "Nothing to settle" : "Settle via UPI"}
+              </button>
+              <button
+                onClick={() => comingSoon("Settle-up history")}
+                className="flex-1 min-h-11 rounded-[12px] border border-[color:var(--accent-2)]/40 bg-white/60 py-2.5 text-[13px] font-bold text-[color:var(--accent-2)]"
+              >
+                History
+              </button>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Insights carousel */}
       <div className="no-scrollbar -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1">
@@ -184,7 +203,10 @@ function InsightCard({ emoji, title, body, cta }: { emoji: string; title: string
           <div className="mt-0.5 text-[12px] leading-snug text-[color:var(--ink-soft)]">{body}</div>
         </div>
       </div>
-      <button className="mt-3 flex w-full items-center justify-between rounded-[10px] bg-[color:var(--mist)] px-3 py-2 text-[12.5px] font-bold text-[color:var(--ink)]">
+      <button
+        onClick={() => comingSoon(title)}
+        className="mt-3 flex w-full min-h-11 items-center justify-between rounded-[10px] bg-[color:var(--mist)] px-3 py-2 text-[12.5px] font-bold text-[color:var(--ink)]"
+      >
         {cta} <ChevronRight className="h-3.5 w-3.5" />
       </button>
     </div>
@@ -205,10 +227,17 @@ function MoneyDateAgenda({ open, onClose, partnerName }: { open: boolean; onClos
             Move ₹5,000/mo from Dining to Bali fund?
           </div>
           <div className="mt-3 flex gap-2">
-            <button className="flex-1 rounded-[12px] py-2.5 text-[13px] font-bold text-white" style={{ background: "var(--accent-2)" }}>
+            <button
+              onClick={() => { toast.success("Agreed — we'll shift ₹5,000/mo 🌴"); onClose(); }}
+              className="flex-1 min-h-11 rounded-[12px] py-2.5 text-[13px] font-bold text-white"
+              style={{ background: "var(--accent-2)" }}
+            >
               Agree
             </button>
-            <button className="flex-1 rounded-[12px] border border-[color:var(--line)] bg-[color:var(--surface)] py-2.5 text-[13px] font-bold text-[color:var(--ink)]">
+            <button
+              onClick={() => comingSoon(`Chat with ${partnerName}`)}
+              className="flex-1 min-h-11 rounded-[12px] border border-[color:var(--line)] bg-[color:var(--surface)] py-2.5 text-[13px] font-bold text-[color:var(--ink)]"
+            >
               Discuss with {partnerName}
             </button>
           </div>
