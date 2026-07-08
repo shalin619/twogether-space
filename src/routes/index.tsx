@@ -1,7 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Bell, ChevronRight, Sparkles } from "lucide-react";
+import { Bell, ChevronRight, Sparkles, LogOut } from "lucide-react";
 import { useMemo, useState } from "react";
+import { signOut } from "@/lib/mockAuth";
+
 import { format, formatDistanceToNow, isToday } from "date-fns";
 
 import {
