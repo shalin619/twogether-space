@@ -84,6 +84,8 @@ function HomeFeed() {
   const [bellOpen, setBellOpen] = useState(false);
   const [memOpen, setMemOpen]   = useState(false);
   const [insightOpen, setInsightOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
 
   const notifications = useMemo(
     () => [
