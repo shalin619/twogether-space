@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import type { OwnerId, Profile } from "@/data/types";
 import { profiles as seedProfiles } from "@/data/mockData";
+import { setViewer } from "@/data/service";
 
 interface CurrentUserCtx {
   currentUserId: OwnerId;
