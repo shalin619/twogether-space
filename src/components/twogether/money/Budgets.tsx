@@ -1,10 +1,11 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { Plus, BookOpen } from "lucide-react";
-import { Card, ProgressBar } from "@/components/twogether/primitives";
+import { Card } from "@/components/twogether/primitives";
 import { BottomSheet } from "@/components/twogether/BottomSheet";
+import { comingSoon } from "@/lib/comingSoon";
 import { getCategories, getTransactions } from "@/data/service";
-import { cn } from "@/lib/utils";
 
 export function Budgets() {
   const catQ = useQuery({ queryKey: ["categories"], queryFn: getCategories });
@@ -89,7 +90,10 @@ export function Budgets() {
             </Card>
           );
         })}
-        <button className="grid min-h-[128px] place-items-center rounded-[20px] border-2 border-dashed border-[color:var(--line)] text-[13px] font-bold text-[color:var(--ink-soft)]">
+        <button
+          onClick={() => comingSoon("New envelope")}
+          className="grid min-h-[128px] place-items-center rounded-[20px] border-2 border-dashed border-[color:var(--line)] text-[13px] font-bold text-[color:var(--ink-soft)]"
+        >
           <span className="flex flex-col items-center gap-1">
             <Plus className="h-5 w-5" />
             Envelope
@@ -122,13 +126,19 @@ function MethodsSheet({ open, onClose }: { open: boolean; onClose: () => void })
             <div className="text-3xl">{m.emoji}</div>
             <div className="mt-2 font-display text-[16px] font-bold text-[color:var(--ink)]">{m.name}</div>
             <p className="mt-1 text-[12.5px] leading-snug text-[color:var(--ink-soft)]">{m.body}</p>
-            <button className="mt-3 w-full rounded-[10px] bg-[color:var(--ink)] py-2 text-[12.5px] font-bold text-white">
+            <button
+              onClick={() => { toast.success(`Adopted ${m.name} 🌱`); onClose(); }}
+              className="mt-3 w-full min-h-11 rounded-[10px] bg-[color:var(--ink)] py-2 text-[12.5px] font-bold text-white"
+            >
               Adopt
             </button>
           </div>
         ))}
       </div>
-      <button className="mt-4 flex w-full items-center justify-center gap-2 rounded-[14px] bg-[color:var(--blush)] py-3 text-[13.5px] font-bold text-[color:var(--ink)]">
+      <button
+        onClick={() => comingSoon("Money style quiz")}
+        className="mt-4 flex w-full min-h-12 items-center justify-center gap-2 rounded-[14px] bg-[color:var(--blush)] py-3 text-[13.5px] font-bold text-[color:var(--ink)]"
+      >
         ✨ Which fits us? Take the 60-sec quiz
       </button>
     </BottomSheet>

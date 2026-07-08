@@ -12,6 +12,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { CurrentUserProvider } from "@/lib/currentUser";
 import { AppShell } from "@/components/twogether/AppShell";
+import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
   return (
@@ -106,6 +107,7 @@ function RootComponent() {
         <AppShell>
           <Outlet />
         </AppShell>
+        <Toaster position="top-center" richColors closeButton />
       </CurrentUserProvider>
     </QueryClientProvider>
   );

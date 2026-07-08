@@ -119,10 +119,63 @@ export const getGratitudeNotes       = () => delay(store.gratitudeNotes);
 export const getDailyQuestion        = () => delay(store.dailyQuestion);
 export const getDailyQuestionHistory = () => delay(store.dailyQuestionHistory);
 export const getCheckIns             = () => delay(store.checkIns);
-export const getInsights             = () => delay(store.insights.filter((i) => !i.dismissed));
-export const getBrief                = () => delay(store.brief);
-export const getRunningBalance       = () => delay(store.runningBalance);
-export const getMonthBudget          = () => delay(store.monthBudget);
+// Privacy: any aggregate that could reflect a hidden gift MUST be recomputed
+// per viewer. We start from the same tx-filter as getTransactions so hidden
+// rows are absent everywhere (Money Story, budgets, insights, running balance).
+function visibleTxForViewer() {
+  return store.transactions.filter((t) => {
+    if (!t.isGiftHidden) return true;
+    return (t.ownerId ?? t.paidBy) === viewer;
+  });
+}
+
+export const getInsights = () =>
+  delay(
+    store.insights.filter((i) => {
+      if (i.dismissed) return false;
+      // If the insight is scoped to a hidden-from user, drop it for that viewer
+      if (i.hiddenFrom && i.hiddenFrom === viewer) return false;
+      return true;
+    }),
+  );
+
+export const getBrief = () =>
+  delay(
+    store.brief.filter((b) => !b.hiddenFrom || b.hiddenFrom !== viewer),
+  );
+
+export const getRunningBalance = () => {
+  // Recompute: any hidden-gift tx paid by viewer's partner would inflate what
+  // the viewer thinks they owe — instead we only settle on non-hidden shared spend.
+  const visible = visibleTxForViewer();
+  // Sum "owed" between the two based on ownership of shared (ours) transactions.
+  const oursTx = visible.filter((t) => t.owner === "ours" && !t.isIncome);
+  let aaravPaidOurs = 0, meeraPaidOurs = 0;
+  for (const t of oursTx) {
+    if (t.paidBy === "aarav") aaravPaidOurs += t.amount;
+    else if (t.paidBy === "meera") meeraPaidOurs += t.amount;
+  }
+  const fairShare = (aaravPaidOurs + meeraPaidOurs) / 2;
+  const aaravNet = aaravPaidOurs - fairShare;
+  const owedTo: OwnerId = aaravNet >= 0 ? "aarav" : "meera";
+  const amount = Math.round(Math.abs(aaravNet));
+  return delay({ owedTo, amount });
+};
+
+export const getMonthBudget = () => {
+  // spent = sum of non-income visible transactions this calendar month
+  const now = new Date();
+  const y = now.getFullYear(), m = now.getMonth();
+  const spent = visibleTxForViewer()
+    .filter((t) => !t.isIncome)
+    .filter((t) => {
+      const d = new Date(t.date);
+      return d.getFullYear() === y && d.getMonth() === m;
+    })
+    .reduce((s, t) => s + t.amount, 0);
+  return delay({ budget: store.monthBudget.budget, spent });
+};
+
 export const getSettlements          = () => delay(store.settlements);
 
 // ---------- Writes: transactions ----------

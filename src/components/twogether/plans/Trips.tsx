@@ -297,7 +297,11 @@ function Docs() {
             <div className="truncate text-[13.5px] font-semibold text-[color:var(--ink)]">{d.name}</div>
             <div className="text-[11.5px] text-[color:var(--ink-soft)]">{d.size} · {d.added}</div>
           </div>
-          <button className="grid h-9 w-9 place-items-center rounded-full text-[color:var(--ink-soft)]" aria-label="Download">
+          <button
+            onClick={() => toast("Coming soon in your space ✨", { description: "Download " + d.name })}
+            className="grid h-11 w-11 place-items-center rounded-full text-[color:var(--ink-soft)]"
+            aria-label="Download"
+          >
             <Download className="h-4 w-4" />
           </button>
         </Card>

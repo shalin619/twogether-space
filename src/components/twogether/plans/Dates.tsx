@@ -61,14 +61,35 @@ export function Dates() {
 
   return (
     <div className="pb-24">
+      <style>{`
+        @keyframes flame-wiggle-kf {
+          0%   { transform: translateY(0)    rotate(0deg)  scale(1);   }
+          25%  { transform: translateY(-2px) rotate(-14deg) scale(1.15); }
+          50%  { transform: translateY(0)    rotate(12deg)  scale(1.1);  }
+          75%  { transform: translateY(-1px) rotate(-6deg) scale(1.08); }
+          100% { transform: translateY(0)    rotate(0deg)  scale(1);   }
+        }
+        .flame-wiggle { animation: flame-wiggle-kf 620ms ease-out; transform-origin: 50% 90%; display:inline-block; }
+      `}</style>
       {/* Header strip */}
       <div className="mx-4 rounded-[20px] card-shadow border border-[color:var(--line)]/60 bg-[color:var(--surface)] p-4">
         <div className="grid grid-cols-3 gap-2 text-center">
-          <div>
-            <div className="text-2xl">🔥</div>
+          <button
+            onClick={(e) => {
+              const el = e.currentTarget.querySelector<HTMLSpanElement>("[data-flame]");
+              if (!el) return;
+              el.classList.remove("flame-wiggle");
+              // force reflow to restart animation
+              void el.offsetWidth;
+              el.classList.add("flame-wiggle");
+            }}
+            className="flex w-full min-h-11 flex-col items-center rounded-xl px-1 py-1 active:bg-[color:var(--mist)]"
+            aria-label="Streak"
+          >
+            <span data-flame className="inline-block text-2xl">🔥</span>
             <div className="font-display text-[20px] font-bold text-[color:var(--ink)]">{statsQ.data?.streak ?? 0}</div>
             <div className="text-[11px] text-[color:var(--ink-soft)]">month streak</div>
-          </div>
+          </button>
           <div>
             <div className="text-2xl">🌙</div>
             <div className="font-display text-[20px] font-bold text-[color:var(--ink)]">1/{statsQ.data?.monthlyGoal ?? 2}</div>

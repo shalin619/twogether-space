@@ -293,6 +293,8 @@ export interface Insight {
   tone: "info" | "caution" | "celebrate";
   savings?: number;
   dismissed?: boolean;
+  // Privacy: hide this insight from a specific viewer (mirrors RLS)
+  hiddenFrom?: OwnerId;
 }
 
 export interface BriefCard {
@@ -300,6 +302,7 @@ export interface BriefCard {
   title: string;
   body: string;
   emoji: string;
+  hiddenFrom?: OwnerId;
 }
 
 export interface Settlement {

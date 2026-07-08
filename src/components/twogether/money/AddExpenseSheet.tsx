@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ChevronDown } from "lucide-react";
 import { BottomSheet } from "@/components/twogether/BottomSheet";
 import { PrivacyDial } from "@/components/twogether/primitives";
+import { comingSoon } from "@/lib/comingSoon";
 import { getCategories } from "@/data/service";
 import { cn } from "@/lib/utils";
 
@@ -110,7 +111,10 @@ export function AddExpenseSheet({ open, onClose }: { open: boolean; onClose: () 
             <input placeholder="Add a note" className="w-full rounded-[10px] border border-[color:var(--line)] bg-[color:var(--surface)] px-3 py-2 text-[13px] outline-none" />
           </Row>
           <Row label="Receipt">
-            <button className="w-full rounded-[10px] border border-dashed border-[color:var(--line)] bg-[color:var(--surface)] px-3 py-3 text-[12px] text-[color:var(--ink-soft)]">
+            <button
+              onClick={() => comingSoon("Receipt attach")}
+              className="w-full min-h-11 rounded-[10px] border border-dashed border-[color:var(--line)] bg-[color:var(--surface)] px-3 py-3 text-[12px] text-[color:var(--ink-soft)]"
+            >
               Attach
             </button>
           </Row>
