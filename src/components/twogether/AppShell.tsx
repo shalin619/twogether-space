@@ -26,7 +26,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [expenseOpen, setExpenseOpen] = useState(false);
   const [spotlight, setSpotlight] = useState(false);
   const location = useLocation();
-  const navigate = useNavigate();
+  
   const showFab = fabRoutes.has(location.pathname);
   const onWelcome = location.pathname.startsWith("/welcome");
 
