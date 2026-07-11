@@ -753,22 +753,13 @@ function SettingsSheet({ open, onClose }: { open: boolean; onClose: () => void }
           </p>
         </div>
 
-        {/* Dev toggle note */}
-        <div className="rounded-2xl border border-dashed border-[color:var(--line)] p-3 text-[11.5px] text-[color:var(--ink-soft)]">
-          Dev tip: use the <b>A / M</b> pill in the bottom-left to swap viewpoints and see how
-          privacy behaves in real time.
-        </div>
-
         <button
-          onClick={() => {
-            signOut();
-            onClose();
-            navigate({ to: "/welcome" });
-          }}
+          onClick={handleSignOut}
           className="flex w-full min-h-12 items-center justify-center gap-2 rounded-full border border-[color:var(--alert)]/40 bg-[color:var(--surface)] text-[14px] font-semibold text-[color:var(--alert)]"
         >
           <LogOut size={15} /> Sign out
         </button>
+
       </div>
     </BottomSheet>
   );
