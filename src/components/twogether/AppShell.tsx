@@ -7,7 +7,8 @@ import { AddExpenseSheet } from "./money/AddExpenseSheet";
 import { QuickAddSheet } from "./QuickAdd";
 import { VoiceSheet } from "./VoiceSheet";
 
-import { isAuthed, hasSeenSpotlight, markSpotlightSeen } from "@/lib/mockAuth";
+import { hasSeenSpotlight, markSpotlightSeen } from "@/lib/mockAuth";
+import { useAuth } from "@/lib/currentUser";
 
 const tabs = [
   { to: "/",       label: "Home",   Icon: Home },
