@@ -2,7 +2,8 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Bell, ChevronRight, Sparkles, LogOut } from "lucide-react";
 import { useMemo, useState } from "react";
-import { signOut } from "@/lib/mockAuth";
+import { supabase } from "@/lib/supabase";
+import { useQueryClient } from "@tanstack/react-query";
 import { comingSoon } from "@/lib/comingSoon";
 
 import { format, formatDistanceToNow, isToday } from "date-fns";
@@ -614,8 +615,21 @@ function relativeShort(iso: string) {
 function SettingsSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { currentUser, partner } = useCurrentUser();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [notif, setNotif] = useState({ digest: true, gratitude: true, money: false });
   const [currency, setCurrency] = useState<"INR" | "USD" | "EUR">("INR");
+
+  const handleSignOut = async () => {
+    try {
+      await queryClient.cancelQueries();
+      queryClient.clear();
+      await supabase.auth.signOut();
+    } finally {
+      onClose();
+      navigate({ to: "/welcome", replace: true });
+    }
+  };
+
 
   return (
     <BottomSheet open={open} onClose={onClose} title="Settings">
@@ -739,22 +753,13 @@ function SettingsSheet({ open, onClose }: { open: boolean; onClose: () => void }
           </p>
         </div>
 
-        {/* Dev toggle note */}
-        <div className="rounded-2xl border border-dashed border-[color:var(--line)] p-3 text-[11.5px] text-[color:var(--ink-soft)]">
-          Dev tip: use the <b>A / M</b> pill in the bottom-left to swap viewpoints and see how
-          privacy behaves in real time.
-        </div>
-
         <button
-          onClick={() => {
-            signOut();
-            onClose();
-            navigate({ to: "/welcome" });
-          }}
+          onClick={handleSignOut}
           className="flex w-full min-h-12 items-center justify-center gap-2 rounded-full border border-[color:var(--alert)]/40 bg-[color:var(--surface)] text-[14px] font-semibold text-[color:var(--alert)]"
         >
           <LogOut size={15} /> Sign out
         </button>
+
       </div>
     </BottomSheet>
   );
