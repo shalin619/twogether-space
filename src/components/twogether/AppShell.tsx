@@ -1,4 +1,4 @@
-import { Link, useLocation, useNavigate } from "@tanstack/react-router";
+import { Link, useLocation } from "@tanstack/react-router";
 import { Home, Coins, CalendarHeart, Users, ListChecks, Mic } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
@@ -7,7 +7,8 @@ import { AddExpenseSheet } from "./money/AddExpenseSheet";
 import { QuickAddSheet } from "./QuickAdd";
 import { VoiceSheet } from "./VoiceSheet";
 
-import { isAuthed, hasSeenSpotlight, markSpotlightSeen } from "@/lib/mockAuth";
+import { hasSeenSpotlight, markSpotlightSeen } from "@/lib/mockAuth";
+import { useAuth } from "@/lib/currentUser";
 
 const tabs = [
   { to: "/",       label: "Home",   Icon: Home },
@@ -25,7 +26,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [expenseOpen, setExpenseOpen] = useState(false);
   const [spotlight, setSpotlight] = useState(false);
   const location = useLocation();
-  const navigate = useNavigate();
+  
   const showFab = fabRoutes.has(location.pathname);
   const onWelcome = location.pathname.startsWith("/welcome");
 
@@ -47,22 +48,17 @@ export function AppShell({ children }: { children: ReactNode }) {
     if (fire && !longFired.current) setVoiceOpen(true);
   };
 
-  // Mock-auth guard — send unauthenticated users to /welcome
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (!isAuthed() && !onWelcome) {
-      navigate({ to: "/welcome" });
-    }
-  }, [location.pathname, onWelcome, navigate]);
+  // Auth redirect is handled centrally by CurrentUserProvider (Supabase session).
+  const { isAuthenticated } = useAuth();
 
   // One-time spotlight on the mic after onboarding
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (isAuthed() && !hasSeenSpotlight() && location.pathname === "/") {
+    if (isAuthenticated && !hasSeenSpotlight() && location.pathname === "/") {
       const t = setTimeout(() => setSpotlight(true), 600);
       return () => clearTimeout(t);
     }
-  }, [location.pathname]);
+  }, [location.pathname, isAuthenticated]);
 
   const dismissSpotlight = () => { setSpotlight(false); markSpotlightSeen(); };
 
