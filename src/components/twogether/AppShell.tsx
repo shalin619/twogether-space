@@ -155,7 +155,6 @@ export function AppShell({ children }: { children: ReactNode }) {
         <VoiceSheet    open={voiceOpen}   onClose={() => setVoiceOpen(false)} />
         <QuickAddSheet open={quickOpen}   onClose={() => setQuickOpen(false)} />
         <AddExpenseSheet open={expenseOpen} onClose={() => setExpenseOpen(false)} />
-        <DevUserToggle />
       </div>
     </div>
   );
