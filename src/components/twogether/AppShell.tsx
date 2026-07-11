@@ -203,24 +203,3 @@ function BottomNav() {
   );
 }
 
-// Dev-only floating toggle: swap current user between Aarav / Meera
-function DevUserToggle() {
-  const { currentUser, swap } = useCurrentUser();
-  const isA = currentUser.id === "aarav";
-  return (
-    <button
-      onClick={swap}
-      className="fixed bottom-24 left-3 z-40 flex items-center gap-2 rounded-full bg-[color:var(--ink)]/85 px-3 py-1.5 text-[11px] font-bold text-white backdrop-blur"
-      title="Dev: switch current user"
-    >
-      <span
-        className="grid h-5 w-5 place-items-center rounded-full text-[10px]"
-        style={{ background: isA ? "var(--accent)" : "var(--accent-2)" }}
-      >
-        {isA ? "A" : "M"}
-      </span>
-      <span className="opacity-80">{currentUser.name}</span>
-      <X className="h-3 w-3 rotate-45 opacity-40" />
-    </button>
-  );
-}
