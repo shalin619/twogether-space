@@ -1,9 +1,11 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState, useEffect, type ReactNode } from "react";
-import { ArrowRight, Check, Copy, MessageCircle, ChevronLeft } from "lucide-react";
+import { useState, useEffect, useRef, type ReactNode } from "react";
+import { Check, Copy, MessageCircle, ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Confetti } from "@/components/twogether/Confetti";
-import { completeAuth } from "@/lib/mockAuth";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/lib/currentUser";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/welcome")({
   component: WelcomePage,
@@ -19,19 +21,23 @@ type Step = "carousel" | "auth" | "pair" | "quiz-money" | "quiz-occasions" | "qu
 
 function WelcomePage() {
   const navigate = useNavigate();
+  const { isLoading, isAuthenticated, coupleId, refreshCouple } = useAuth();
   const [step, setStep] = useState<Step>("carousel");
-  const [name, setName]   = useState("");
-  const [email, setEmail] = useState("");
+  const [pickedMoney, setPickedMoney] = useState<"yours" | "one-pot" | "hybrid" | null>(null);
 
-  // If already signed in (visited /welcome by mistake), bounce home.
+  // Route bootstrap based on real auth state
   useEffect(() => {
-    try { if (localStorage.getItem("twogether.auth") === "1") navigate({ to: "/" }); } catch { /* */ }
-  }, [navigate]);
+    if (isLoading) return;
+    if (isAuthenticated && coupleId) {
+      // fully onboarded — leave welcome
+      navigate({ to: "/" });
+    } else if (isAuthenticated && !coupleId) {
+      // signed in but no space yet → jump straight to pair step
+      setStep((s) => (s === "carousel" || s === "auth" ? "pair" : s));
+    }
+  }, [isLoading, isAuthenticated, coupleId, navigate]);
 
-  const finish = () => {
-    completeAuth({ name: name || "You", email: email || "you@example.com" });
-    navigate({ to: "/" });
-  };
+  const finish = () => navigate({ to: "/" });
 
   return (
     <div
@@ -46,11 +52,11 @@ function WelcomePage() {
         style={{ paddingTop: "max(env(safe-area-inset-top), 12px)" }}
       >
         {step === "carousel"     && <Carousel onDone={() => setStep("auth")} />}
-        {step === "auth"         && <AuthScreen name={name} email={email} setName={setName} setEmail={setEmail} onContinue={() => setStep("pair")} onBack={() => setStep("carousel")} />}
-        {step === "pair"         && <PairScreen onDone={() => setStep("quiz-money")} onBack={() => setStep("auth")} />}
-        {step === "quiz-money"   && <MoneyQuiz onDone={() => setStep("quiz-occasions")} onSkip={() => setStep("quiz-occasions")} />}
-        {step === "quiz-occasions" && <OccasionsQuiz onDone={() => setStep("quiz-stage")} onSkip={() => setStep("quiz-stage")} />}
-        {step === "quiz-stage"   && <LifeStageQuiz onDone={finish} onSkip={finish} />}
+        {step === "auth"         && <AuthScreen onContinue={() => setStep("pair")} onBack={() => setStep("carousel")} />}
+        {step === "pair"         && <PairScreen onDone={async () => { await refreshCouple(); setStep("quiz-money"); }} onBack={() => setStep("auth")} />}
+        {step === "quiz-money"   && <MoneyQuiz onDone={(pick) => { setPickedMoney(pick); setStep("quiz-occasions"); }} onSkip={() => setStep("quiz-occasions")} coupleId={coupleId} moneyPick={pickedMoney} />}
+        {step === "quiz-occasions" && <OccasionsQuiz onDone={() => setStep("quiz-stage")} onSkip={() => setStep("quiz-stage")} coupleId={coupleId} />}
+        {step === "quiz-stage"   && <LifeStageQuiz onDone={finish} onSkip={finish} coupleId={coupleId} />}
       </div>
     </div>
   );
@@ -126,62 +132,110 @@ function Carousel({ onDone }: { onDone: () => void }) {
 }
 
 // ================ 2. Auth ================
-function AuthScreen({
-  name, email, setName, setEmail, onContinue, onBack,
-}: {
-  name: string; email: string;
-  setName: (s: string) => void; setEmail: (s: string) => void;
-  onContinue: () => void; onBack: () => void;
-}) {
-  const ok = name.trim().length > 0 && /\S+@\S+/.test(email);
+function AuthScreen({ onContinue, onBack }: { onContinue: () => void; onBack: () => void }) {
+  const [mode, setMode] = useState<"signup" | "signin">("signup");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const ok =
+    /\S+@\S+/.test(email) &&
+    password.length >= 6 &&
+    (mode === "signin" || name.trim().length > 0);
+
+  const submit = async () => {
+    if (!ok || busy) return;
+    setBusy(true);
+    try {
+      if (mode === "signup") {
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: { name },
+            emailRedirectTo: `${window.location.origin}/welcome`,
+          },
+        });
+        if (error) throw error;
+
+        if (!data.session) {
+          toast.success("Check your email to confirm your account 💌");
+          setBusy(false);
+          return;
+        }
+        // Best-effort profile name write (profiles row is auto-created by trigger)
+        if (data.user) {
+          await supabase.from("profiles").update({ name }).eq("id", data.user.id);
+        }
+        onContinue();
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        onContinue();
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <div className="flex flex-1 flex-col px-6 pt-4">
       <Header onBack={onBack} />
       <div className="mt-6">
         <h1 className="font-display text-[26px] font-bold leading-tight text-[color:var(--ink)]">
-          Nice to meet you 👋
+          {mode === "signup" ? "Nice to meet you 👋" : "Welcome back 💛"}
         </h1>
         <p className="mt-1 text-[13.5px] text-[color:var(--ink-soft)]">
-          Just a name and an email — you can change it later.
+          {mode === "signup"
+            ? "Just a name, email, and password — you can change it later."
+            : "Sign in to your shared space."}
         </p>
       </div>
 
       <div className="mt-6 space-y-3">
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Your name"
-          className="w-full min-h-13 rounded-2xl border border-[color:var(--line)] bg-white/80 px-4 text-[15px] outline-none focus:border-[color:var(--accent)]"
-        />
+        {mode === "signup" && (
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Your name"
+            className="w-full min-h-13 rounded-2xl border border-[color:var(--line)] bg-white/80 px-4 text-[15px] outline-none focus:border-[color:var(--accent)]"
+          />
+        )}
         <input
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="you@example.com"
           type="email"
+          autoComplete="email"
+          className="w-full min-h-13 rounded-2xl border border-[color:var(--line)] bg-white/80 px-4 text-[15px] outline-none focus:border-[color:var(--accent)]"
+        />
+        <input
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Password (min 6 chars)"
+          type="password"
+          autoComplete={mode === "signup" ? "new-password" : "current-password"}
           className="w-full min-h-13 rounded-2xl border border-[color:var(--line)] bg-white/80 px-4 text-[15px] outline-none focus:border-[color:var(--accent)]"
         />
       </div>
 
       <button
-        disabled={!ok}
-        onClick={onContinue}
+        disabled={!ok || busy}
+        onClick={submit}
         className="mt-4 w-full min-h-13 rounded-full py-4 text-[15px] font-semibold text-white disabled:opacity-40"
         style={{ background: "var(--accent)" }}
       >
-        Continue
+        {busy ? "One moment…" : mode === "signup" ? "Create account" : "Sign in"}
       </button>
 
-      <div className="my-4 flex items-center gap-3 text-[12px] text-[color:var(--ink-soft)]">
-        <span className="h-px flex-1 bg-[color:var(--line)]" />
-        or
-        <span className="h-px flex-1 bg-[color:var(--line)]" />
-      </div>
-
       <button
-        onClick={onContinue}
-        className="w-full min-h-13 rounded-full border border-[color:var(--line)] bg-white/80 text-[14px] font-semibold text-[color:var(--ink)]"
+        onClick={() => setMode(mode === "signup" ? "signin" : "signup")}
+        className="mt-3 min-h-10 text-center text-[13px] font-semibold text-[color:var(--ink-soft)]"
       >
-        <span className="mr-2">G</span> Continue with Google
+        {mode === "signup" ? "I already have an account" : "Create a new account instead"}
       </button>
 
       <div className="mt-auto mb-4 text-center text-[11px] text-[color:var(--ink-soft)]">
@@ -195,8 +249,60 @@ function AuthScreen({
 function PairScreen({ onDone, onBack }: { onDone: () => void; onBack: () => void }) {
   const [mode, setMode] = useState<"choose" | "create" | "join" | "success">("choose");
   const [code, setCode] = useState("");
+  const [createdCode, setCreatedCode] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [joining, setJoining] = useState(false);
 
-  const roomCode = "LUV-482";
+  const startCreate = async () => {
+    setCreating(true);
+    try {
+      const { data, error } = await supabase.rpc("create_couple", { p_status: "dating" });
+      if (error) throw error;
+      setCreatedCode(String(data));
+      setMode("create");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not create your space");
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const pairUp = async () => {
+    if (joining) return;
+    setJoining(true);
+    try {
+      const { error } = await supabase.rpc("join_couple", { p_code: code.toUpperCase() });
+      if (error) throw error;
+      setMode("success");
+    } catch {
+      toast.error("Invalid or expired code");
+    } finally {
+      setJoining(false);
+    }
+  };
+
+  // Poll for partner join
+  useEffect(() => {
+    if (mode !== "create" || !createdCode) return;
+    let stop = false;
+    const check = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase
+        .from("couple_members")
+        .select("couple_id, user_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (!data) return;
+      const { data: members } = await supabase
+        .from("couple_members")
+        .select("user_id")
+        .eq("couple_id", data.couple_id);
+      if (!stop && members && members.length >= 2) setMode("success");
+    };
+    const id = window.setInterval(check, 5000);
+    return () => { stop = true; clearInterval(id); };
+  }, [mode, createdCode]);
 
   if (mode === "success") {
     return <PairSuccess onDone={onDone} />;
@@ -216,12 +322,13 @@ function PairScreen({ onDone, onBack }: { onDone: () => void; onBack: () => void
 
           <div className="mt-6 space-y-3">
             <button
-              onClick={() => setMode("create")}
-              className="w-full rounded-3xl border border-[color:var(--line)] bg-white/80 p-5 text-left transition-transform active:scale-[0.98]"
+              disabled={creating}
+              onClick={startCreate}
+              className="w-full rounded-3xl border border-[color:var(--line)] bg-white/80 p-5 text-left transition-transform active:scale-[0.98] disabled:opacity-60"
             >
               <div className="text-[32px]">💫</div>
               <div className="mt-2 font-display text-[18px] font-bold text-[color:var(--ink)]">
-                Start our space
+                {creating ? "Creating…" : "Start our space"}
               </div>
               <div className="mt-1 text-[13px] text-[color:var(--ink-soft)]">
                 Get a code to share with your person.
@@ -243,7 +350,7 @@ function PairScreen({ onDone, onBack }: { onDone: () => void; onBack: () => void
         </>
       )}
 
-      {mode === "create" && (
+      {mode === "create" && createdCode && (
         <>
           <h1 className="mt-6 font-display text-[22px] font-bold text-[color:var(--ink)]">
             Share this with your person
@@ -254,23 +361,25 @@ function PairScreen({ onDone, onBack }: { onDone: () => void; onBack: () => void
 
           <div className="mt-6 rounded-3xl bg-white/80 p-5 text-center">
             <div className="font-display text-[42px] font-bold tracking-[0.15em] text-[color:var(--accent)]">
-              {roomCode}
+              {createdCode}
             </div>
             <button
-              onClick={() => { navigator.clipboard?.writeText(roomCode); }}
+              onClick={() => { navigator.clipboard?.writeText(createdCode); toast.success("Code copied"); }}
               className="mt-2 inline-flex min-h-10 items-center gap-1 rounded-full bg-[color:var(--mist)] px-4 text-[12.5px] font-semibold text-[color:var(--ink)]"
             >
               <Copy size={13} /> Copy code
             </button>
           </div>
 
-          <button
+          <a
             className="mt-4 flex w-full min-h-13 items-center justify-center gap-2 rounded-full py-4 text-[15px] font-semibold text-white"
             style={{ background: "#25D366" }}
-            onClick={() => {}}
+            href={`https://wa.me/?text=${encodeURIComponent(`Join our Twogether space with this code: ${createdCode}`)}`}
+            target="_blank"
+            rel="noopener noreferrer"
           >
             <MessageCircle size={16} /> Share via WhatsApp
-          </button>
+          </a>
 
           <div className="mt-6 flex items-center justify-center gap-2 text-[12.5px] text-[color:var(--ink-soft)]">
             <span
@@ -304,12 +413,12 @@ function PairScreen({ onDone, onBack }: { onDone: () => void; onBack: () => void
             className="mt-6 w-full min-h-14 rounded-2xl border border-[color:var(--line)] bg-white/80 px-4 text-center font-display text-[24px] font-bold tracking-[0.15em] outline-none focus:border-[color:var(--accent)]"
           />
           <button
-            disabled={code.replace(/\W/g, "").length < 6}
-            onClick={() => setMode("success")}
+            disabled={code.replace(/\W/g, "").length < 6 || joining}
+            onClick={pairUp}
             className="mt-4 w-full min-h-13 rounded-full py-4 text-[15px] font-semibold text-white disabled:opacity-40"
             style={{ background: "var(--accent)" }}
           >
-            Pair up
+            {joining ? "Pairing…" : "Pair up"}
           </button>
         </>
       )}
@@ -393,7 +502,9 @@ function QuizShell({
   );
 }
 
-const MONEY_QS: { q: string; a: string; b: string; av: "yours" | "one-pot" | "hybrid"; bv: "yours" | "one-pot" | "hybrid" }[] = [
+type MoneyModel = "yours" | "one-pot" | "hybrid";
+
+const MONEY_QS: { q: string; a: string; b: string; av: MoneyModel; bv: MoneyModel }[] = [
   { q: "Weekend brunch — who pays?",     a: "One of us grabs it 🤝",  b: "Split every time 🧮",    av: "hybrid",  bv: "yours" },
   { q: "Salaries land — where do they go?", a: "One joint pot 🍯",   b: "Ours + separate ✨",     av: "one-pot", bv: "hybrid" },
   { q: "A ₹5,000 spontaneous purchase…", a: "Just do it 💫",         b: "Text first 📱",          av: "one-pot", bv: "hybrid" },
@@ -401,17 +512,29 @@ const MONEY_QS: { q: string; a: string; b: string; av: "yours" | "one-pot" | "hy
   { q: "Personal spending is…",          a: "Totally private 🔒",    b: "Loosely visible 👀",     av: "yours",   bv: "hybrid" },
 ];
 
-function MoneyQuiz({ onDone, onSkip }: { onDone: () => void; onSkip: () => void }) {
-  const [i, setI] = useState(0);
-  const [scores, setScores] = useState({ yours: 0, "one-pot": 0, hybrid: 0 });
-  const [result, setResult] = useState<null | "yours" | "one-pot" | "hybrid">(null);
+const SPLIT_RULE: Record<MoneyModel, string> = {
+  yours: "each-pays-own",
+  hybrid: "50-50",
+  "one-pot": "shared-pool",
+};
 
-  const pick = (v: "yours" | "one-pot" | "hybrid") => {
+function MoneyQuiz({ onDone, onSkip, coupleId, moneyPick }: { onDone: (pick: MoneyModel) => void; onSkip: () => void; coupleId: string | null; moneyPick: MoneyModel | null }) {
+  const [i, setI] = useState(0);
+  const [scores, setScores] = useState<Record<MoneyModel, number>>({ yours: 0, "one-pot": 0, hybrid: 0 });
+  const [result, setResult] = useState<MoneyModel | null>(moneyPick);
+
+  const pick = (v: MoneyModel) => {
     const next = { ...scores, [v]: scores[v] + 1 };
     setScores(next);
     if (i === MONEY_QS.length - 1) {
-      const winner = (Object.entries(next).sort((a, b) => b[1] - a[1])[0][0]) as typeof result;
+      const winner = (Object.entries(next).sort((a, b) => b[1] - a[1])[0][0]) as MoneyModel;
       setResult(winner);
+      if (coupleId) {
+        supabase.from("couples")
+          .update({ money_model: winner, split_rule: SPLIT_RULE[winner] })
+          .eq("id", coupleId)
+          .then(({ error }) => { if (error) toast.error(error.message); });
+      }
     } else setI(i + 1);
   };
 
@@ -422,14 +545,14 @@ function MoneyQuiz({ onDone, onSkip }: { onDone: () => void; onSkip: () => void 
       yours:    { title: "You're a Yours & Mine couple 🧮", body: "Independent finances, teamwork on the shared stuff." },
     }[result];
     return (
-      <QuizShell step={0} total={3} title="Your money style" onSkip={onDone}>
+      <QuizShell step={0} total={3} title="Your money style" onSkip={() => onDone(result)}>
         <div className="flex flex-1 flex-col items-center justify-center text-center">
           <div className="mb-4 text-[64px]">🤝</div>
           <div className="font-display text-[22px] font-bold text-[color:var(--ink)]">{meta.title}</div>
           <p className="mt-2 max-w-[280px] text-[13.5px] text-[color:var(--ink-soft)]">{meta.body}</p>
         </div>
         <button
-          onClick={onDone}
+          onClick={() => onDone(result)}
           className="mb-4 w-full min-h-13 rounded-full py-4 text-[15px] font-semibold text-white"
           style={{ background: "var(--accent)" }}
         >
@@ -465,11 +588,36 @@ function MoneyQuiz({ onDone, onSkip }: { onDone: () => void; onSkip: () => void 
   );
 }
 
-function OccasionsQuiz({ onDone, onSkip }: { onDone: () => void; onSkip: () => void }) {
+function OccasionsQuiz({ onDone, onSkip, coupleId }: { onDone: () => void; onSkip: () => void; coupleId: string | null }) {
   const [anniv, setAnniv] = useState("");
   const [rows, setRows] = useState<{ name: string; date: string }[]>([
     { name: "", date: "" },
   ]);
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    if (!coupleId) return onDone();
+    setSaving(true);
+    try {
+      const payload: { couple_id: string; kind: string; label: string; date: string }[] = [];
+      if (anniv) payload.push({ couple_id: coupleId, kind: "anniversary", label: "Anniversary", date: anniv });
+      for (const r of rows) {
+        if (r.name.trim() && r.date) {
+          payload.push({ couple_id: coupleId, kind: "birthday", label: r.name.trim(), date: r.date });
+        }
+      }
+      if (payload.length) {
+        const { error } = await supabase.from("occasions").insert(payload);
+        if (error) throw error;
+      }
+      onDone();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn't save occasions");
+      onDone();
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <QuizShell step={1} total={3} title="Dates that matter" onSkip={onSkip}>
@@ -522,11 +670,12 @@ function OccasionsQuiz({ onDone, onSkip }: { onDone: () => void; onSkip: () => v
       </div>
       <div className="flex-1" />
       <button
-        onClick={onDone}
-        className="mb-4 w-full min-h-13 rounded-full py-4 text-[15px] font-semibold text-white"
+        disabled={saving}
+        onClick={save}
+        className="mb-4 w-full min-h-13 rounded-full py-4 text-[15px] font-semibold text-white disabled:opacity-60"
         style={{ background: "var(--accent)" }}
       >
-        Continue
+        {saving ? "Saving…" : "Continue"}
       </button>
     </QuizShell>
   );
@@ -541,10 +690,28 @@ const STAGES = [
   { v: "parents",      label: "Parents", emoji: "👶" },
 ];
 
-function LifeStageQuiz({ onDone, onSkip }: { onDone: () => void; onSkip: () => void }) {
+function LifeStageQuiz({ onDone, onSkip, coupleId }: { onDone: () => void; onSkip: () => void; coupleId: string | null }) {
   const [picked, setPicked] = useState<string[]>([]);
+  const [saving, setSaving] = useState(false);
   const toggle = (v: string) =>
     setPicked((p) => (p.includes(v) ? p.filter((x) => x !== v) : [...p, v]));
+
+  const save = async () => {
+    if (!coupleId || picked.length === 0) return onDone();
+    setSaving(true);
+    try {
+      const { error } = await supabase.from("couples")
+        .update({ status: picked[0] })
+        .eq("id", coupleId);
+      if (error) throw error;
+      onDone();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn't save your stage");
+      onDone();
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <QuizShell step={2} total={3} title="Where are you two right now?" onSkip={onSkip}>
@@ -569,11 +736,12 @@ function LifeStageQuiz({ onDone, onSkip }: { onDone: () => void; onSkip: () => v
       </div>
       <div className="flex-1" />
       <button
-        onClick={onDone}
-        className="mb-4 w-full min-h-13 rounded-full py-4 text-[15px] font-semibold text-white"
+        disabled={saving}
+        onClick={save}
+        className="mb-4 w-full min-h-13 rounded-full py-4 text-[15px] font-semibold text-white disabled:opacity-60"
         style={{ background: "var(--accent)" }}
       >
-        Enter our space
+        {saving ? "Saving…" : "Enter our space"}
       </button>
     </QuizShell>
   );
