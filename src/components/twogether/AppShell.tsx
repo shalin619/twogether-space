@@ -1,12 +1,12 @@
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
-import { Home, Coins, CalendarHeart, Users, ListChecks, Mic, X } from "lucide-react";
+import { Home, Coins, CalendarHeart, Users, ListChecks, Mic } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 import { AddExpenseSheet } from "./money/AddExpenseSheet";
 import { QuickAddSheet } from "./QuickAdd";
 import { VoiceSheet } from "./VoiceSheet";
-import { useCurrentUser } from "@/lib/currentUser";
+
 import { isAuthed, hasSeenSpotlight, markSpotlightSeen } from "@/lib/mockAuth";
 
 const tabs = [
@@ -155,7 +155,6 @@ export function AppShell({ children }: { children: ReactNode }) {
         <VoiceSheet    open={voiceOpen}   onClose={() => setVoiceOpen(false)} />
         <QuickAddSheet open={quickOpen}   onClose={() => setQuickOpen(false)} />
         <AddExpenseSheet open={expenseOpen} onClose={() => setExpenseOpen(false)} />
-        <DevUserToggle />
       </div>
     </div>
   );
@@ -204,24 +203,3 @@ function BottomNav() {
   );
 }
 
-// Dev-only floating toggle: swap current user between Aarav / Meera
-function DevUserToggle() {
-  const { currentUser, swap } = useCurrentUser();
-  const isA = currentUser.id === "aarav";
-  return (
-    <button
-      onClick={swap}
-      className="fixed bottom-24 left-3 z-40 flex items-center gap-2 rounded-full bg-[color:var(--ink)]/85 px-3 py-1.5 text-[11px] font-bold text-white backdrop-blur"
-      title="Dev: switch current user"
-    >
-      <span
-        className="grid h-5 w-5 place-items-center rounded-full text-[10px]"
-        style={{ background: isA ? "var(--accent)" : "var(--accent-2)" }}
-      >
-        {isA ? "A" : "M"}
-      </span>
-      <span className="opacity-80">{currentUser.name}</span>
-      <X className="h-3 w-3 rotate-45 opacity-40" />
-    </button>
-  );
-}
