@@ -14,13 +14,177 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      couple_members: {
+        Row: {
+          couple_id: string
+          joined_at: string
+          user_id: string
+        }
+        Insert: {
+          couple_id: string
+          joined_at?: string
+          user_id: string
+        }
+        Update: {
+          couple_id?: string
+          joined_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "couple_members_couple_id_fkey"
+            columns: ["couple_id"]
+            isOneToOne: false
+            referencedRelation: "couples"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      couples: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          money_model: string | null
+          split_rule: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          money_model?: string | null
+          split_rule?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          money_model?: string | null
+          split_rule?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      occasions: {
+        Row: {
+          couple_id: string
+          created_at: string
+          date: string
+          id: string
+          kind: string
+          label: string
+        }
+        Insert: {
+          couple_id: string
+          created_at?: string
+          date: string
+          id?: string
+          kind: string
+          label: string
+        }
+        Update: {
+          couple_id?: string
+          created_at?: string
+          date?: string
+          id?: string
+          kind?: string
+          label?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "occasions_couple_id_fkey"
+            columns: ["couple_id"]
+            isOneToOne: false
+            referencedRelation: "couples"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          name: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id: string
+          name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      transactions: {
+        Row: {
+          amount: number
+          category: string | null
+          couple_id: string
+          created_at: string
+          currency: string
+          id: string
+          note: string | null
+          occurred_at: string
+          owner_id: string
+        }
+        Insert: {
+          amount?: number
+          category?: string | null
+          couple_id: string
+          created_at?: string
+          currency?: string
+          id?: string
+          note?: string | null
+          occurred_at?: string
+          owner_id: string
+        }
+        Update: {
+          amount?: number
+          category?: string | null
+          couple_id?: string
+          created_at?: string
+          currency?: string
+          id?: string
+          note?: string | null
+          occurred_at?: string
+          owner_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_couple_id_fkey"
+            columns: ["couple_id"]
+            isOneToOne: false
+            referencedRelation: "couples"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      create_couple: { Args: { p_status?: string }; Returns: string }
+      current_couple_id: { Args: never; Returns: string }
+      is_couple_member: {
+        Args: { _couple_id: string; _user_id: string }
+        Returns: boolean
+      }
+      join_couple: { Args: { p_code: string }; Returns: string }
     }
     Enums: {
       [_ in never]: never
