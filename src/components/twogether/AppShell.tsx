@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { AddExpenseSheet } from "./money/AddExpenseSheet";
 import { QuickAddSheet } from "./QuickAdd";
 import { VoiceSheet } from "./VoiceSheet";
-import { useCurrentUser } from "@/lib/currentUser";
+
 import { isAuthed, hasSeenSpotlight, markSpotlightSeen } from "@/lib/mockAuth";
 
 const tabs = [
