@@ -7,8 +7,15 @@ import { AddExpenseSheet } from "./money/AddExpenseSheet";
 import { QuickAddSheet } from "./QuickAdd";
 import { VoiceSheet } from "./VoiceSheet";
 
-import { hasSeenSpotlight, markSpotlightSeen } from "@/lib/mockAuth";
 import { useAuth } from "@/lib/currentUser";
+
+const SPOTLIGHT_KEY = "twogether.spotlightSeen";
+const hasSeenSpotlight = (): boolean => {
+  try { return localStorage.getItem(SPOTLIGHT_KEY) === "1"; } catch { return true; }
+};
+const markSpotlightSeen = () => {
+  try { localStorage.setItem(SPOTLIGHT_KEY, "1"); } catch { /* noop */ }
+};
 
 const tabs = [
   { to: "/",       label: "Home",   Icon: Home },
