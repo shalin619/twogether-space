@@ -615,8 +615,21 @@ function relativeShort(iso: string) {
 function SettingsSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { currentUser, partner } = useCurrentUser();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [notif, setNotif] = useState({ digest: true, gratitude: true, money: false });
   const [currency, setCurrency] = useState<"INR" | "USD" | "EUR">("INR");
+
+  const handleSignOut = async () => {
+    try {
+      await queryClient.cancelQueries();
+      queryClient.clear();
+      await supabase.auth.signOut();
+    } finally {
+      onClose();
+      navigate({ to: "/welcome", replace: true });
+    }
+  };
+
 
   return (
     <BottomSheet open={open} onClose={onClose} title="Settings">
