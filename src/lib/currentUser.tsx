@@ -1,53 +1,95 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
+import type { Session, User } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabase";
 import type { OwnerId, Profile } from "@/data/types";
 import { profiles as seedProfiles } from "@/data/mockData";
-import { setViewer } from "@/data/service";
 
-interface CurrentUserCtx {
-  currentUserId: OwnerId;
-  currentUser: Profile;
-  partner: Profile;
-  swap: () => void;
-  setCurrentUser: (id: OwnerId) => void;
+// ---------- Real auth context ----------
+interface AuthCtx {
+  user: User | null;
+  session: Session | null;
+  isLoading: boolean;
+  isAuthenticated: boolean;
 }
 
-const Ctx = createContext<CurrentUserCtx | null>(null);
+const AuthContext = createContext<AuthCtx | null>(null);
 
-const STORAGE_KEY = "twogether.currentUser";
+const PUBLIC_ROUTES = ["/welcome", "/auth", "/reset-password"];
 
 export function CurrentUserProvider({ children }: { children: ReactNode }) {
-  const [currentUserId, setCurrentUserId] = useState<OwnerId>("aarav");
+  const [session, setSession] = useState<Session | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
 
-  // Read from localStorage AFTER mount to avoid SSR hydration mismatch
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored === "aarav" || stored === "meera") setCurrentUserId(stored);
-    } catch { /* ignore */ }
+    // IMPORTANT: register the listener FIRST, then hydrate — avoids missed events.
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, next) => {
+      setSession(next);
+      setIsLoading(false);
+    });
+
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+      setIsLoading(false);
+    });
+
+    return () => { sub.subscription.unsubscribe(); };
   }, []);
 
   useEffect(() => {
-    try { localStorage.setItem(STORAGE_KEY, currentUserId); } catch { /* ignore */ }
-    setViewer(currentUserId);
-  }, [currentUserId]);
+    if (isLoading) return;
+    const isPublic = PUBLIC_ROUTES.some((p) => pathname.startsWith(p));
+    if (!session && !isPublic) navigate({ to: "/welcome", replace: true });
+  }, [session, isLoading, pathname, navigate]);
 
-  const currentUser = seedProfiles.find((p) => p.id === currentUserId)!;
-  const partner = seedProfiles.find((p) => p.id !== currentUserId)!;
-
-  const swap = () =>
-    setCurrentUserId((prev) => (prev === "aarav" ? "meera" : "aarav"));
+  const value: AuthCtx = {
+    user: session?.user ?? null,
+    session,
+    isLoading,
+    isAuthenticated: !!session,
+  };
 
   return (
-    <Ctx.Provider
-      value={{ currentUserId, currentUser, partner, swap, setCurrentUser: setCurrentUserId }}
-    >
+    <AuthContext.Provider value={value}>
+      <CompatProvider>{children}</CompatProvider>
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth() {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error("useAuth must be used within CurrentUserProvider");
+  return ctx;
+}
+
+// ---------- Back-compat shim for existing screens ----------
+// Screens still read { currentUserId, currentUser, partner } to render owner
+// colors, avatars and labels. Privacy is now enforced by the database, so the
+// dev A/M toggle is gone — the viewer is fixed to the first seed profile
+// until screens are migrated to a real profile lookup.
+interface CompatCtx {
+  currentUserId: OwnerId;
+  currentUser: Profile;
+  partner: Profile;
+}
+
+const CompatContext = createContext<CompatCtx | null>(null);
+
+function CompatProvider({ children }: { children: ReactNode }) {
+  const currentUserId: OwnerId = "aarav";
+  const currentUser = seedProfiles.find((p) => p.id === currentUserId)!;
+  const partner = seedProfiles.find((p) => p.id !== currentUserId)!;
+  return (
+    <CompatContext.Provider value={{ currentUserId, currentUser, partner }}>
       {children}
-    </Ctx.Provider>
+    </CompatContext.Provider>
   );
 }
 
 export function useCurrentUser() {
-  const ctx = useContext(Ctx);
+  const ctx = useContext(CompatContext);
   if (!ctx) throw new Error("useCurrentUser must be used within CurrentUserProvider");
   return ctx;
 }
